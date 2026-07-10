@@ -270,6 +270,39 @@ final class ScannerTests: XCTestCase {
             "next dev")
     }
 
+    func testPortRewriterSanitizeAndNoStacking() {
+        // The exact pollution the user hit: stacked PORT= prefixes on a
+        // retitled next-server command.
+        XCTAssertEqual(
+            PortRewriter.sanitize("PORT=3000 PORT=3000 next-server (v15.5.7)"),
+            "PORT=3000 next-server (v15.5.7)")
+        XCTAssertEqual(
+            PortRewriter.sanitize("PORT=3000 PORT=3001 PORT=3002 cmd"),
+            "PORT=3002 cmd")
+        XCTAssertEqual(PortRewriter.sanitize("PORT=3000 next dev"), "PORT=3000 next dev")
+        XCTAssertEqual(PortRewriter.sanitize("next dev"), "next dev")
+
+        // rewrite must update an existing PORT= (any value) instead of stacking.
+        XCTAssertEqual(
+            PortRewriter.rewrite(command: "PORT=3001 node server.js", from: 3000, to: 3002),
+            "PORT=3002 node server.js")
+        XCTAssertEqual(
+            PortRewriter.rewrite(command: "PORT=3000 PORT=3000 node server.js", from: 3000, to: 3001),
+            "PORT=3001 node server.js")
+    }
+
+    func testStartScriptFallback() {
+        let output = """
+        @@PID:9
+        @@CWD:/x/prod
+        @@PKG
+        { "name": "prod-app", "scripts": { "start": "next start", "build": "next build" } }
+        """
+        let lookup = [9: PortEntry(port: 3000, address: "*", proto: "TCP", pid: 9,
+                                   command: "node", user: "u")]
+        XCTAssertEqual(ProjectInspector.parse(output, lookup: lookup)[9]?.devCommand, "npm start")
+    }
+
     func testManagedLogPath() {
         XCTAssertEqual(
             PortRewriter.managedLogPath(name: "acme-web", command: "node", port: 3001),
@@ -335,7 +368,8 @@ final class ScannerTests: XCTestCase {
         ]
         let projects = ProjectInspector.parse(output, lookup: lookup)
         XCTAssertEqual(projects[1]?.devCommand, "pnpm dev")
-        XCTAssertNil(projects[2]?.devCommand, "no dev script → no dev command")
+        XCTAssertEqual(projects[2]?.devCommand, "npm start",
+                       "no dev script → fall back to the start script")
         XCTAssertTrue(ProjectInspector.looksLikeRetitledProcess("next-server (v15.3.2)"))
         XCTAssertFalse(ProjectInspector.looksLikeRetitledProcess("node /x/server.js --port 3000"))
     }

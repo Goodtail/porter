@@ -84,11 +84,18 @@ enum ProjectInspector {
 
         if let pkg = sections["@@PKG"] {
             name = firstMatch(#""name"\s*:\s*"([^"]+)""#, in: pkg)
+            // Prefer the dev script; fall back to start. (npm runs "start"
+            // without the `run` keyword.)
+            let runner: (String) -> String = { script in
+                if sections["@@PNPM"] != nil { return "pnpm \(script)" }
+                if sections["@@YARN"] != nil { return "yarn \(script)" }
+                if sections["@@BUN"] != nil { return "bun \(script)" }
+                return script == "start" ? "npm start" : "npm run \(script)"
+            }
             if pkg.contains("\"dev\"") {
-                if sections["@@PNPM"] != nil { devCommand = "pnpm dev" }
-                else if sections["@@YARN"] != nil { devCommand = "yarn dev" }
-                else if sections["@@BUN"] != nil { devCommand = "bun dev" }
-                else { devCommand = "npm run dev" }
+                devCommand = runner("dev")
+            } else if pkg.contains("\"start\"") {
+                devCommand = runner("start")
             }
             let signatures: [(String, String, ServiceCategory)] = [
                 ("\"next\"", "Next.js", .frontend), ("next dev", "Next.js", .frontend),

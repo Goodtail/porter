@@ -157,6 +157,8 @@ struct RelaunchSheet: View {
     @State private var command = ""
     @State private var cwd = ""
     @State private var portText = ""
+    @State private var baseCommand = ""
+    @State private var substitutedDevScript = false
 
     private var port: Int? { Int(portText.trimmingCharacters(in: .whitespaces)) }
     private var portValid: Bool { port.map { (1...65535).contains($0) } ?? false }
@@ -190,9 +192,12 @@ struct RelaunchSheet: View {
                         .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
                         .onChange(of: portText) { _, _ in
+                            // Always re-derive from the base so edits never stack.
                             if let newPort = port, portValid {
-                                command = PortRewriter.rewrite(command: record.fullCommand,
+                                command = PortRewriter.rewrite(command: baseCommand,
                                                                from: record.port, to: newPort)
+                            } else {
+                                command = baseCommand
                             }
                         }
                 }
@@ -220,6 +225,15 @@ struct RelaunchSheet: View {
                     .frame(height: 64)
                     .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
+                if substitutedDevScript {
+                    HStack(spacing: 5) {
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 9))
+                        Text("기록된 명령어가 실행 불가능한 프로세스 타이틀이라 package.json 스크립트로 대체했습니다")
+                            .font(Theme.ui(10))
+                    }
+                    .foregroundStyle(Theme.purple)
+                }
             }
 
             HStack {
@@ -247,12 +261,15 @@ struct RelaunchSheet: View {
         .frame(width: 520)
         .background(Theme.surface)
         .onAppear {
-            if ProjectInspector.looksLikeRetitledProcess(record.fullCommand),
+            let recorded = PortRewriter.sanitize(record.fullCommand)
+            if ProjectInspector.looksLikeRetitledProcess(recorded),
                let devCommand = record.devCommand {
-                command = devCommand
+                baseCommand = devCommand
+                substitutedDevScript = true
             } else {
-                command = record.fullCommand
+                baseCommand = recorded
             }
+            command = baseCommand
             cwd = record.cwd
             portText = String(record.port)
         }

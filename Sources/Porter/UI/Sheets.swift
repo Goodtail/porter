@@ -121,6 +121,7 @@ struct RestartConfirmSheet: View {
     @State private var captureLog = true
     /// The untouched original — port rewrites always re-derive from this.
     @State private var baseCommand: String = ""
+    @State private var substitutedDevScript = false
 
     private var newPort: Int? { Int(portText.trimmingCharacters(in: .whitespaces)) }
     private var portChanged: Bool { newPort != nil && newPort != entry.port }
@@ -204,6 +205,15 @@ struct RestartConfirmSheet: View {
                         .frame(height: 64)
                         .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
+                    if substitutedDevScript {
+                        HStack(spacing: 5) {
+                            Image(systemName: "wand.and.stars")
+                                .font(.system(size: 9))
+                            Text("ps의 명령어가 실행 불가능한 프로세스 타이틀이라 package.json 스크립트로 대체했습니다")
+                                .font(Theme.ui(10))
+                        }
+                        .foregroundStyle(Theme.purple)
+                    }
                 }
                 Toggle(isOn: $captureLog) {
                     Text("출력을 Porter 로그로 기록 — 재시작 후 라이브 로그 사용 가능 (~/.porter/logs)")
@@ -239,12 +249,13 @@ struct RestartConfirmSheet: View {
         .frame(width: 520)
         .background(Theme.surface)
         .onAppear {
-            let recorded = state.detail?.fullCommand ?? ""
+            let recorded = PortRewriter.sanitize(state.detail?.fullCommand ?? "")
             let devCommand = state.projects[entry.pid]?.devCommand
             // "next-server (v15.3.2)" is a rewritten process title, not a
-            // runnable command — substitute the project's dev script.
+            // runnable command — substitute the project's dev/start script.
             if ProjectInspector.looksLikeRetitledProcess(recorded), let devCommand {
                 baseCommand = devCommand
+                substitutedDevScript = true
             } else {
                 baseCommand = recorded
             }
