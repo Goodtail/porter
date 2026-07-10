@@ -279,6 +279,72 @@ final class ScannerTests: XCTestCase {
             "$HOME/.porter/logs/python3-12-8000.log")
     }
 
+    // MARK: history persistence
+
+    func testHistoryStoreRoundtrip() {
+        let original = HistoryStore.load()
+        defer { HistoryStore.save(original) } // restore user's real history
+
+        let entry = HistoryEntry(id: UUID(), date: Date(), action: .kill,
+                                 targetID: "local", targetName: "My Mac", port: 3000,
+                                 command: "node", fullCommand: "node server.js",
+                                 cwd: "/tmp/proj", projectName: "proj", framework: "Next.js")
+        HistoryStore.save([entry])
+        let loaded = HistoryStore.load()
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertEqual(loaded.first, entry)
+
+        // Cap: only the newest 50 survive.
+        let many = (0..<80).map { index in
+            HistoryEntry(id: UUID(), date: Date(), action: .kill,
+                         targetID: "local", targetName: "My Mac", port: index,
+                         command: "x", fullCommand: "x", cwd: "/", projectName: nil, framework: nil)
+        }
+        HistoryStore.save(many)
+        XCTAssertEqual(HistoryStore.load().count, HistoryStore.cap)
+    }
+
+    // MARK: favicon html parsing
+
+    func testFaviconIconPathParsing() {
+        XCTAssertEqual(FaviconFetcher.iconPath(fromHTML:
+            #"<head><link rel="icon" href="/vite.svg" /></head>"#), "/vite.svg")
+        XCTAssertEqual(FaviconFetcher.iconPath(fromHTML:
+            #"<link href="/static/fav.png" rel="shortcut icon">"#), "/static/fav.png")
+        XCTAssertEqual(FaviconFetcher.iconPath(fromHTML:
+            #"<LINK REL="ICON" HREF="favicon-32.png">"#), "favicon-32.png")
+        // stylesheet links must not match
+        XCTAssertNil(FaviconFetcher.iconPath(fromHTML:
+            #"<link rel="stylesheet" href="/main.css">"#))
+        XCTAssertNil(FaviconFetcher.iconPath(fromHTML: "<html><body>no links</body></html>"))
+    }
+
+    /// End-to-end: a disposable local HTTP server serves favicon.ico; the
+    /// fetcher must retrieve and decode it — the exact path the UI uses.
+    func testFaviconFetchFromLiveServer() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("porter-favicon-test-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let onePixelPNG = Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")!
+        try onePixelPNG.write(to: dir.appendingPathComponent("favicon.ico"))
+
+        let server = Process()
+        server.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+        server.arguments = ["-m", "http.server", "39997", "--bind", "127.0.0.1"]
+        server.currentDirectoryURL = dir
+        server.standardOutput = FileHandle.nullDevice
+        server.standardError = FileHandle.nullDevice
+        try server.run()
+        defer { server.terminate() }
+        try await Task.sleep(nanoseconds: 1_500_000_000)
+
+        let icon = await FaviconFetcher.fetch(base: URL(string: "http://127.0.0.1:39997")!)
+        XCTAssertNotNil(icon, "favicon.ico from a live local server must decode")
+    }
+
     // MARK: log streaming
 
     func testLogStreamDeliversLines() {

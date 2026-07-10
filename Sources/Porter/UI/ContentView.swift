@@ -42,5 +42,8 @@ struct ContentView: View {
         .sheet(item: $state.passwordPromptTarget) { target in
             PasswordPromptSheet(target: target).environmentObject(state)
         }
+        .sheet(item: $state.relaunchCandidate) { record in
+            RelaunchSheet(record: record).environmentObject(state)
+        }
     }
 }

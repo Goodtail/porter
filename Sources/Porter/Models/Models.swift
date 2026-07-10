@@ -131,6 +131,27 @@ struct ProjectInfo: Equatable {
     var category: ServiceCategory
 }
 
+// MARK: - Run history
+
+/// Snapshot taken when Porter kills/restarts a process — enough to relaunch
+/// it later without hunting down the directory and command again.
+struct HistoryEntry: Identifiable, Codable, Equatable {
+    enum Action: String, Codable {
+        case kill, restart, relaunch
+    }
+    let id: UUID
+    let date: Date
+    let action: Action
+    let targetID: String
+    let targetName: String
+    let port: Int
+    let command: String       // short process name
+    let fullCommand: String
+    let cwd: String
+    let projectName: String?
+    let framework: String?
+}
+
 // MARK: - Activity Feed
 
 struct ActivityEvent: Identifiable {

@@ -69,6 +69,19 @@ struct PortListView: View {
             .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.border, lineWidth: 1))
 
             Button {
+                state.showHistory.toggle()
+            } label: {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(state.history.isEmpty ? Theme.textFaint : Theme.textSecondary)
+            }
+            .buttonStyle(PorterButtonStyle())
+            .help("실행 이력 — kill/재시작한 프로세스를 다시 실행")
+            .popover(isPresented: $state.showHistory, arrowEdge: .bottom) {
+                HistoryPopover().environmentObject(state)
+            }
+
+            Button {
                 withAnimation(.easeOut(duration: 0.12)) { state.groupByCategory.toggle() }
             } label: {
                 Image(systemName: state.groupByCategory ? "square.grid.2x2" : "list.bullet")
@@ -219,9 +232,10 @@ struct PortListView: View {
         HStack(spacing: 0) {
             Text("PORT").frame(width: 84, alignment: .leading)
             Text("PROCESS").frame(minWidth: 140, maxWidth: .infinity, alignment: .leading)
-            Text("PID").frame(width: 70, alignment: .leading)
-            Text("USER").frame(width: 90, alignment: .leading)
-            Text("BIND").frame(width: 110, alignment: .leading)
+            Text("URL").frame(width: 150, alignment: .leading)
+            Text("PID").frame(width: 64, alignment: .leading)
+            Text("USER").frame(width: 80, alignment: .leading)
+            Text("BIND").frame(width: 92, alignment: .leading)
             Spacer().frame(width: 70)
         }
         .font(Theme.ui(9.5, weight: .bold))
@@ -297,18 +311,22 @@ struct PortRow: View {
                 }
                 .frame(minWidth: 140, maxWidth: .infinity, alignment: .leading)
 
+                // URL + favicon (from the live service)
+                urlCell
+                    .frame(width: 150, alignment: .leading)
+
                 // PID
                 Text(entry.pid > 0 ? String(entry.pid) : "—")
                     .font(Theme.mono(11.5))
                     .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 70, alignment: .leading)
+                    .frame(width: 64, alignment: .leading)
 
                 // USER
                 Text(entry.user)
                     .font(Theme.mono(11.5))
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
-                    .frame(width: 90, alignment: .leading)
+                    .frame(width: 80, alignment: .leading)
 
                 // BIND
                 HStack(spacing: 4) {
@@ -323,7 +341,7 @@ struct PortRow: View {
                             .help("루프백 전용 — 외부에서 접근 불가")
                     }
                 }
-                .frame(width: 110, alignment: .leading)
+                .frame(width: 92, alignment: .leading)
 
                 // Hover quick actions: open in browser + kill
                 HStack(spacing: 10) {
@@ -371,6 +389,43 @@ struct PortRow: View {
             Divider()
             Button("재시작 · 포트 변경…") { state.requestRestart(entry) }
             Button("Kill (SIGTERM)", role: .destructive) { state.killCandidate = entry }
+        }
+    }
+
+    /// Favicon + short URL, clickable. Empty for unreachable/DB ports.
+    @ViewBuilder
+    private var urlCell: some View {
+        if let primary = state.urls(for: entry).first {
+            Button {
+                state.open(primary)
+            } label: {
+                HStack(spacing: 5) {
+                    if let icon = state.favicons[FaviconFetcher.key(primary.url)] {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .interpolation(.high)
+                            .frame(width: 14, height: 14)
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                    } else {
+                        Image(systemName: "globe")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.textFaint)
+                            .frame(width: 14)
+                    }
+                    Text("\(primary.url.host ?? "?"):\(String(entry.port))")
+                        .font(Theme.mono(10.5))
+                        .foregroundStyle(hovering ? Theme.accent : Theme.textSecondary)
+                        .underline(hovering)
+                        .lineLimit(1)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("브라우저에서 열기: \(primary.url.absoluteString)")
+        } else {
+            Text("—")
+                .font(Theme.mono(10.5))
+                .foregroundStyle(Theme.textFaint.opacity(0.5))
         }
     }
 

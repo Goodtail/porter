@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 /// Launch flags. `--demo` fills the UI with curated fake data (nice for
@@ -42,6 +43,53 @@ enum DemoData {
         981: ProjectInfo(name: nil, framework: nil, category: .database),
         1027: ProjectInfo(name: nil, framework: nil, category: .database),
     ]
+
+    /// Letter-tile stand-ins for real favicons (demo can't fetch over HTTP).
+    static var favicons: [String: NSImage] {
+        let specs: [(String, String, NSColor)] = [
+            ("localhost:3000", "N", NSColor.black),
+            ("localhost:5173", "V", NSColor(red: 0.39, green: 0.29, blue: 0.93, alpha: 1)),
+            ("localhost:8000", "F", NSColor(red: 0.02, green: 0.59, blue: 0.53, alpha: 1)),
+            ("localhost:8888", "J", NSColor(red: 0.95, green: 0.45, blue: 0.11, alpha: 1)),
+        ]
+        var result: [String: NSImage] = [:]
+        for (key, letter, color) in specs {
+            result[key] = letterTile(letter, background: color)
+        }
+        return result
+    }
+
+    private static func letterTile(_ letter: String, background: NSColor) -> NSImage {
+        NSImage(size: NSSize(width: 32, height: 32), flipped: false) { rect in
+            let path = NSBezierPath(roundedRect: rect, xRadius: 7, yRadius: 7)
+            background.setFill()
+            path.fill()
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 19, weight: .bold),
+                .foregroundColor: NSColor.white,
+            ]
+            let text = NSAttributedString(string: letter, attributes: attrs)
+            let size = text.size()
+            text.draw(at: NSPoint(x: (rect.width - size.width) / 2,
+                                  y: (rect.height - size.height) / 2))
+            return true
+        }
+    }
+
+    static var history: [HistoryEntry] {
+        let now = Date()
+        return [
+            HistoryEntry(id: UUID(), date: now.addingTimeInterval(-140), action: .kill,
+                         targetID: Target.local.id, targetName: "My Mac", port: 5174,
+                         command: "node", fullCommand: "node ./node_modules/.bin/vite --port 5174",
+                         cwd: "/Users/dev/acme-admin", projectName: "acme-admin", framework: "Vite"),
+            HistoryEntry(id: UUID(), date: now.addingTimeInterval(-3900), action: .restart,
+                         targetID: "demo:gpu", targetName: "gpu-server", port: 8000,
+                         command: "python3.12",
+                         fullCommand: "python3.12 -m uvicorn app.main:api --reload --port 8000",
+                         cwd: "/home/ubuntu/acme-api", projectName: "acme-api", framework: "FastAPI"),
+        ]
+    }
 
     static func detail(for entry: PortEntry) -> ProcessDetail {
         switch entry.port {

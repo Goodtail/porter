@@ -29,6 +29,15 @@ final class AppState: ObservableObject {
     @Published var streamingFile: String?
     private var logStream: LogStream?
 
+    // MARK: Run history
+    @Published var history: [HistoryEntry] = []
+    @Published var showHistory = false
+    @Published var relaunchCandidate: HistoryEntry?   // opens RelaunchSheet
+
+    // MARK: Favicons ("host:port" → image, fetched from the live service)
+    @Published var favicons: [String: NSImage] = [:]
+    private var faviconAttempted: Set<String> = []
+
     // MARK: Project intelligence
     /// pid → detected project info, for the currently selected target.
     @Published var projects: [Int: ProjectInfo] = [:]
@@ -76,12 +85,15 @@ final class AppState: ObservableObject {
             events = DemoData.seedEvents(targetName: Target.local.name)
             projects = DemoData.projects
             tailscaleIPs = [Target.local.id: "100.84.12.7"]
+            favicons = DemoData.favicons
+            history = DemoData.history
             return
         }
         var all: [Target] = [.local]
         all += SSHConfigParser.targetsFromDefaultConfig()
         all += TargetStore.load()
         targets = all
+        history = HistoryStore.load()
         configureTimer()
 
         NotificationCenter.default.addObserver(
@@ -213,7 +225,10 @@ final class AppState: ObservableObject {
                 syncProcessWatchers(pids: Set(newPorts.map(\.pid).filter { $0 > 0 }))
             }
             // Best-effort enrichment, off the critical path.
-            Task { await fetchProjectsIfNeeded() }
+            Task {
+                await fetchProjectsIfNeeded()
+                fetchFaviconsIfNeeded()
+            }
             if !tailscaleProbed.contains(target.id) {
                 tailscaleProbed.insert(target.id)
                 Task { await probeTailscale(target) }
@@ -337,6 +352,93 @@ final class AppState: ObservableObject {
     func open(_ portURL: PortURL) {
         NSWorkspace.shared.open(portURL.url)
         log(.info, "브라우저 열기: \(portURL.url.absoluteString)")
+    }
+
+    /// Favicons come from the live service itself (/favicon.ico or the
+    /// homepage's <link rel=icon>), so local and remote behave identically.
+    private func fetchFaviconsIfNeeded() {
+        guard !isDemo else { return }
+        for entry in ports {
+            guard let primary = urls(for: entry).first else { continue }
+            let key = FaviconFetcher.key(primary.url)
+            guard !faviconAttempted.contains(key) else { continue }
+            faviconAttempted.insert(key)
+            Task { [weak self] in
+                if let icon = await FaviconFetcher.fetch(base: primary.url) {
+                    self?.favicons[key] = icon
+                }
+            }
+        }
+    }
+
+    // MARK: - Run history (kill 후에도 명령어·디렉토리를 잃지 않기)
+
+    private func recordHistory(action: HistoryEntry.Action, entry: PortEntry,
+                               fullCommand: String, cwd: String) {
+        let record = HistoryEntry(
+            id: UUID(), date: Date(), action: action,
+            targetID: selectedTargetID, targetName: selectedTarget.name,
+            port: entry.port, command: entry.command,
+            fullCommand: fullCommand, cwd: cwd,
+            projectName: projects[entry.pid]?.name,
+            framework: projects[entry.pid]?.framework
+        )
+        history.insert(record, at: 0)
+        if history.count > HistoryStore.cap { history.removeLast(history.count - HistoryStore.cap) }
+        if !isDemo { HistoryStore.save(history) }
+    }
+
+    func clearHistory() {
+        history = []
+        if !isDemo { HistoryStore.save(history) }
+    }
+
+    /// Relaunch a historical process on its original target: same command,
+    /// same cwd, output captured to a Porter-managed log.
+    func relaunch(_ record: HistoryEntry, command: String, cwd: String, port: Int) async {
+        guard !isDemo else {
+            log(.info, "(demo) 재실행: \(record.command) :\(port)")
+            return
+        }
+        guard let target = targets.first(where: { $0.id == record.targetID }) else {
+            log(.error, "재실행 실패: 타깃 '\(record.targetName)'을 찾을 수 없습니다")
+            return
+        }
+        isActing = true
+        defer { isActing = false }
+
+        let logPath = PortRewriter.managedLogPath(name: record.projectName,
+                                                  command: record.command, port: port)
+        let script = Scanner.restartScript(command: command, cwd: cwd, logPath: logPath)
+        do {
+            let runner = Runners.runner(for: target)
+            let result: CommandResult
+            if let local = runner as? LocalRunner {
+                result = try await local.runInLoginShell(script)
+            } else {
+                result = try await runner.run(script)
+            }
+            guard result.succeeded else {
+                throw CommandError.failed(exitCode: result.exitCode, stderr: result.stderr)
+            }
+            let newPid = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            log(.success, "재실행: \(record.command) :\(port) on \(target.name) → 새 PID \(newPid)")
+            var updated = record
+            history.removeAll { $0.id == record.id }
+            updated = HistoryEntry(id: UUID(), date: Date(), action: .relaunch,
+                                   targetID: record.targetID, targetName: record.targetName,
+                                   port: port, command: record.command,
+                                   fullCommand: command, cwd: cwd,
+                                   projectName: record.projectName, framework: record.framework)
+            history.insert(updated, at: 0)
+            HistoryStore.save(history)
+        } catch {
+            log(.error, "재실행 실패 (\(record.command)): \(error.localizedDescription)")
+        }
+        if target.id == selectedTargetID {
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            await refresh()
+        }
     }
 
     // MARK: - SSH password flow
@@ -509,6 +611,16 @@ final class AppState: ObservableObject {
         defer { isActing = false }
         do {
             let runner = Runners.runner(for: target)
+
+            // Snapshot command/cwd BEFORE the process dies — this is what makes
+            // the history relaunchable (F-history).
+            var snapshot: ProcessDetail? = (detail?.pid == entry.pid) ? detail : nil
+            if snapshot == nil,
+               let fetched = try? await runner.run(Scanner.detailScript(pid: entry.pid)) {
+                snapshot = Scanner.parseDetail(fetched.stdout, pid: entry.pid,
+                                               fallbackUser: entry.user)
+            }
+
             let result = try await runner.run(Scanner.killScript(pid: entry.pid, force: force))
             if !result.succeeded {
                 throw CommandError.failed(exitCode: result.exitCode, stderr: result.stderr)
@@ -519,6 +631,10 @@ final class AppState: ObservableObject {
             let dead = alive.stdout.contains("DEAD")
             if dead {
                 log(.success, "\(force ? "강제 종료" : "종료"): \(entry.command) (PID \(entry.pid), :\(entry.port))")
+                if let snapshot, let cwd = snapshot.cwd {
+                    recordHistory(action: .kill, entry: entry,
+                                  fullCommand: snapshot.fullCommand, cwd: cwd)
+                }
             } else {
                 log(.warning, "\(entry.command) (PID \(entry.pid))가 SIGTERM 후에도 살아있습니다 — Force Kill을 사용하세요")
             }
@@ -542,6 +658,7 @@ final class AppState: ObservableObject {
         let target = selectedTarget
         isActing = true
         defer { isActing = false }
+        recordHistory(action: .restart, entry: entry, fullCommand: command, cwd: cwd)
         do {
             let runner = Runners.runner(for: target)
             _ = try await runner.run(Scanner.killScript(pid: entry.pid, force: false))

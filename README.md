@@ -51,6 +51,12 @@ into a couple of clicks. Remote machines get **exactly the same UX as localhost*
   local or over SSH). Processes restarted through Porter get their output
   captured to `~/.porter/logs/` — instantly streamable even if they used to log
   only to a terminal
+- **Run history** — every kill/restart snapshots the full command, working
+  directory, port and target *before* the process dies. The clock button lists
+  them; one click relaunches — no more digging for "what was that command again?"
+- **Favicons in the list** — a URL column shows each service's address with the
+  favicon fetched from the running service itself (`/favicon.ico`, falling back
+  to the homepage's `<link rel=icon>`); click to open
 - **Move to another port** — the restart sheet has a PORT field: Porter rewrites
   `--port 3000` / `-p 3000` / `PORT=3000` in the command (or prepends `PORT=`),
   shows you the result, and relaunches — "3000 is taken, run it on 3001" is now
