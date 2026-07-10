@@ -1,4 +1,16 @@
+import AppKit
 import SwiftUI
+
+/// Bundled brand assets (SPM resources).
+enum AppAssets {
+    /// The generated flat app icon — same artwork as the Dock/.icns icon.
+    static let logo: NSImage? = {
+        guard let url = Bundle.module.url(forResource: "AppIcon", withExtension: "png") else {
+            return nil
+        }
+        return NSImage(contentsOf: url)
+    }()
+}
 
 /// Orca-inspired dark developer palette: deep navy-black canvas, low-chroma
 /// panels, signal green/blue accents, red reserved for destructive actions.

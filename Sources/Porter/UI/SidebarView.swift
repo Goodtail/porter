@@ -13,11 +13,18 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // App mark
+            // App mark — the real app icon, not a symbol stand-in
             HStack(spacing: 8) {
-                Image(systemName: "point.3.connected.trianglepath.dotted")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.green)
+                if let logo = AppAssets.logo {
+                    Image(nsImage: logo)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 24, height: 24)
+                } else {
+                    Image(systemName: "point.3.connected.trianglepath.dotted")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.green)
+                }
                 Text("Porter")
                     .font(Theme.ui(15, weight: .bold))
                     .foregroundStyle(Theme.textPrimary)
