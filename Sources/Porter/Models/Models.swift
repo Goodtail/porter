@@ -129,6 +129,10 @@ struct ProjectInfo: Equatable {
     var name: String?        // package.json "name", pyproject name, or dir basename
     var framework: String?   // "Next.js", "NestJS", "FastAPI", …
     var category: ServiceCategory
+    /// Canonical way to start this project ("pnpm dev", "npm run dev") when a
+    /// dev script exists — used when ps reports a retitled, non-runnable
+    /// command like "next-server (v15.3.2)".
+    var devCommand: String?
 }
 
 // MARK: - Run history
@@ -150,6 +154,7 @@ struct HistoryEntry: Identifiable, Codable, Equatable {
     let cwd: String
     let projectName: String?
     let framework: String?
+    var devCommand: String?
 }
 
 // MARK: - Activity Feed

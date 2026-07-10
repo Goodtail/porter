@@ -42,7 +42,9 @@ enum ScreenshotDirector {
             capture(sheet, to: directory + "/screenshot-restart.png")
         }
 
-        NSApp.terminate(nil)
+        // NSApp.terminate can stall while a sheet's modal session is active;
+        // everything is on disk, so exit outright.
+        exit(0)
     }
 
     /// Renders the window's frame view (title bar, rounded corners included)

@@ -279,6 +279,78 @@ final class ScannerTests: XCTestCase {
             "$HOME/.porter/logs/python3-12-8000.log")
     }
 
+    // MARK: restart script + outcome verification
+
+    func testParseRestartResult() {
+        XCTAssertEqual(Scanner.parseRestartResult("PORTER_OK 4242\n"), .started(pid: "4242"))
+        XCTAssertEqual(Scanner.parseRestartResult("PORTER_CDFAIL\n"), .badDirectory)
+        XCTAssertEqual(Scanner.parseRestartResult("PORTER_DEAD\nzsh: command not found: node\n"),
+                       .diedInstantly(logTail: "zsh: command not found: node"))
+        XCTAssertNil(Scanner.parseRestartResult("garbage"))
+    }
+
+    /// The real script, run through the real local runner: a surviving command
+    /// reports PORTER_OK; an instantly-dying one reports PORTER_DEAD with the
+    /// log tail; a bad cwd reports PORTER_CDFAIL.
+    func testRestartScriptEndToEnd() async throws {
+        let dir = FileManager.default.temporaryDirectory.path
+        let runner = LocalRunner()
+
+        let ok = try await runner.run(
+            Scanner.restartScript(command: "sleep 3", cwd: dir, logPath: nil))
+        guard case .started(let pid)? = Scanner.parseRestartResult(ok.stdout) else {
+            return XCTFail("expected PORTER_OK, got: \(ok.stdout)")
+        }
+        _ = try await runner.run("kill -TERM \(pid) 2>/dev/null; true") // cleanup
+
+        let log = dir + "/porter-restart-test.log"
+        defer { try? FileManager.default.removeItem(atPath: log) }
+        let dead = try await runner.run(
+            Scanner.restartScript(command: "definitely-not-a-command-xyz", cwd: dir, logPath: log))
+        guard case .diedInstantly(let tail)? = Scanner.parseRestartResult(dead.stdout) else {
+            return XCTFail("expected PORTER_DEAD, got: \(dead.stdout)")
+        }
+        XCTAssertTrue(tail.contains("not found"), "log tail should surface the shell error: \(tail)")
+
+        let badCwd = try await runner.run(
+            Scanner.restartScript(command: "true", cwd: "/no/such/dir/porter", logPath: nil))
+        XCTAssertEqual(Scanner.parseRestartResult(badCwd.stdout), .badDirectory)
+    }
+
+    func testDevCommandDetection() {
+        let output = """
+        @@PID:1
+        @@CWD:/x/web
+        @@PKG
+        { "name": "web", "scripts": { "dev": "next dev" } }
+        @@PNPM
+        @@PID:2
+        @@CWD:/x/api
+        @@PKG
+        { "name": "api", "scripts": { "start": "node ." } }
+        """
+        let lookup = [
+            1: PortEntry(port: 3000, address: "*", proto: "TCP", pid: 1, command: "node", user: "u"),
+            2: PortEntry(port: 4000, address: "*", proto: "TCP", pid: 2, command: "node", user: "u"),
+        ]
+        let projects = ProjectInspector.parse(output, lookup: lookup)
+        XCTAssertEqual(projects[1]?.devCommand, "pnpm dev")
+        XCTAssertNil(projects[2]?.devCommand, "no dev script → no dev command")
+        XCTAssertTrue(ProjectInspector.looksLikeRetitledProcess("next-server (v15.3.2)"))
+        XCTAssertFalse(ProjectInspector.looksLikeRetitledProcess("node /x/server.js --port 3000"))
+    }
+
+    func testHistoryEntryDecodesLegacyJSONWithoutDevCommand() throws {
+        let legacy = """
+        [{"id":"\(UUID().uuidString)","date":700000000,"action":"kill","targetID":"local",
+        "targetName":"My Mac","port":3000,"command":"node","fullCommand":"node x.js",
+        "cwd":"/tmp","projectName":null,"framework":null}]
+        """
+        let decoded = try JSONDecoder().decode([HistoryEntry].self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.count, 1)
+        XCTAssertNil(decoded[0].devCommand)
+    }
+
     // MARK: history persistence
 
     func testHistoryStoreRoundtrip() {

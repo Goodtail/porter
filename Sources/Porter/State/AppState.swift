@@ -52,6 +52,8 @@ final class AppState: ObservableObject {
     @Published var autoRefresh = true { didSet { configureTimer() } }
     @Published var events: [ActivityEvent] = []
     @Published var feedCollapsed = false
+    enum FeedTab { case activity, history }
+    @Published var feedTab: FeedTab = .activity
     @Published var killCandidate: PortEntry?      // opens KillConfirmSheet
     @Published var restartCandidate: PortEntry?   // opens RestartConfirmSheet
     @Published var showAddTarget = false
@@ -381,10 +383,16 @@ final class AppState: ObservableObject {
             port: entry.port, command: entry.command,
             fullCommand: fullCommand, cwd: cwd,
             projectName: projects[entry.pid]?.name,
-            framework: projects[entry.pid]?.framework
+            framework: projects[entry.pid]?.framework,
+            devCommand: projects[entry.pid]?.devCommand
         )
         history.insert(record, at: 0)
         if history.count > HistoryStore.cap { history.removeLast(history.count - HistoryStore.cap) }
+        if !isDemo { HistoryStore.save(history) }
+    }
+
+    func deleteHistory(_ id: HistoryEntry.ID) {
+        history.removeAll { $0.id == id }
         if !isDemo { HistoryStore.save(history) }
     }
 
@@ -411,27 +419,26 @@ final class AppState: ObservableObject {
                                                   command: record.command, port: port)
         let script = Scanner.restartScript(command: command, cwd: cwd, logPath: logPath)
         do {
-            let runner = Runners.runner(for: target)
-            let result: CommandResult
-            if let local = runner as? LocalRunner {
-                result = try await local.runInLoginShell(script)
-            } else {
-                result = try await runner.run(script)
-            }
-            guard result.succeeded else {
+            let result = try await Runners.runner(for: target).run(script)
+            switch Scanner.parseRestartResult(result.stdout) {
+            case .started(let newPid):
+                log(.success, "재실행: \(record.command) :\(port) on \(target.name) → 새 PID \(newPid)")
+                history.removeAll { $0.id == record.id }
+                history.insert(HistoryEntry(id: UUID(), date: Date(), action: .relaunch,
+                                            targetID: record.targetID, targetName: record.targetName,
+                                            port: port, command: record.command,
+                                            fullCommand: command, cwd: cwd,
+                                            projectName: record.projectName,
+                                            framework: record.framework,
+                                            devCommand: record.devCommand), at: 0)
+                HistoryStore.save(history)
+            case .diedInstantly(let tail):
+                log(.error, "재실행 직후 종료됨 — \(tail.isEmpty ? "로그 없음" : tail)")
+            case .badDirectory:
+                log(.error, "재실행 실패: 디렉토리가 없습니다 — \(cwd)")
+            case nil:
                 throw CommandError.failed(exitCode: result.exitCode, stderr: result.stderr)
             }
-            let newPid = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-            log(.success, "재실행: \(record.command) :\(port) on \(target.name) → 새 PID \(newPid)")
-            var updated = record
-            history.removeAll { $0.id == record.id }
-            updated = HistoryEntry(id: UUID(), date: Date(), action: .relaunch,
-                                   targetID: record.targetID, targetName: record.targetName,
-                                   port: port, command: record.command,
-                                   fullCommand: command, cwd: cwd,
-                                   projectName: record.projectName, framework: record.framework)
-            history.insert(updated, at: 0)
-            HistoryStore.save(history)
         } catch {
             log(.error, "재실행 실패 (\(record.command)): \(error.localizedDescription)")
         }
@@ -665,16 +672,15 @@ final class AppState: ObservableObject {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
 
             let script = Scanner.restartScript(command: command, cwd: cwd, logPath: logPath)
-            let result: CommandResult
-            if let local = runner as? LocalRunner {
-                result = try await local.runInLoginShell(script)
-            } else {
-                result = try await runner.run(script)
-            }
-            if result.succeeded {
-                let newPid = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            let result = try await runner.run(script)
+            switch Scanner.parseRestartResult(result.stdout) {
+            case .started(let newPid):
                 log(.success, "재시작: \(entry.command) :\(entry.port) → 새 PID \(newPid)")
-            } else {
+            case .diedInstantly(let tail):
+                log(.error, "재시작 직후 종료됨 — \(tail.isEmpty ? "로그 없음" : tail)")
+            case .badDirectory:
+                log(.error, "재시작 실패: 디렉토리가 없습니다 — \(cwd)")
+            case nil:
                 throw CommandError.failed(exitCode: result.exitCode, stderr: result.stderr)
             }
         } catch {

@@ -23,6 +23,9 @@ enum ProjectInspector {
             [ -f "$cwd/go.mod" ]           && { echo "@@GO"; head -1 "$cwd/go.mod"; }
             [ -f "$cwd/Cargo.toml" ]       && { echo "@@RS"; head -c 600 "$cwd/Cargo.toml"; echo; }
             [ -f "$cwd/Gemfile" ]          && { echo "@@RB"; head -c 600 "$cwd/Gemfile"; echo; }
+            [ -f "$cwd/pnpm-lock.yaml" ]   && echo "@@PNPM"
+            [ -f "$cwd/yarn.lock" ]        && echo "@@YARN"
+            { [ -f "$cwd/bun.lockb" ] || [ -f "$cwd/bun.lock" ]; } && echo "@@BUN"
           fi
         done
         true
@@ -53,8 +56,12 @@ enum ProjectInspector {
                 cwd = ""; sections = [:]; marker = nil
             } else if line.hasPrefix("@@CWD:") {
                 cwd = String(line.dropFirst(6))
-            } else if ["@@PKG", "@@PY", "@@RQ", "@@GO", "@@RS", "@@RB"].contains(line) {
+            } else if ["@@PKG", "@@PY", "@@RQ", "@@GO", "@@RS", "@@RB",
+                       "@@PNPM", "@@YARN", "@@BUN"].contains(line) {
                 marker = line
+                if ["@@PNPM", "@@YARN", "@@BUN"].contains(line) {
+                    sections[line] = "" // presence flag, no content follows
+                }
             } else if let m = marker {
                 sections[m, default: ""] += line + "\n"
             }
@@ -73,9 +80,16 @@ enum ProjectInspector {
         var name: String?
         var framework: String?
         var category: ServiceCategory?
+        var devCommand: String?
 
         if let pkg = sections["@@PKG"] {
             name = firstMatch(#""name"\s*:\s*"([^"]+)""#, in: pkg)
+            if pkg.contains("\"dev\"") {
+                if sections["@@PNPM"] != nil { devCommand = "pnpm dev" }
+                else if sections["@@YARN"] != nil { devCommand = "yarn dev" }
+                else if sections["@@BUN"] != nil { devCommand = "bun dev" }
+                else { devCommand = "npm run dev" }
+            }
             let signatures: [(String, String, ServiceCategory)] = [
                 ("\"next\"", "Next.js", .frontend), ("next dev", "Next.js", .frontend),
                 ("\"nuxt\"", "Nuxt", .frontend),
@@ -141,7 +155,14 @@ enum ProjectInspector {
             }
         }
         return ProjectInfo(name: name, framework: framework,
-                           category: category ?? fallbackCategory(command: command, port: port))
+                           category: category ?? fallbackCategory(command: command, port: port),
+                           devCommand: devCommand)
+    }
+
+    /// True when ps reported a rewritten process title, not a runnable command
+    /// ("next-server (v15.3.2)"). Relaunching such a string can never work.
+    static func looksLikeRetitledProcess(_ command: String) -> Bool {
+        command.contains(" (")
     }
 
     /// Classification when no manifest is readable — by command name, then port.

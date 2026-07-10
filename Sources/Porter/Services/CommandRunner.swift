@@ -84,11 +84,6 @@ struct LocalRunner: CommandRunner {
     func run(_ script: String) async throws -> CommandResult {
         try await Subprocess.run(executable: "/bin/zsh", arguments: ["-c", script])
     }
-
-    /// Login shell — picks up nvm/pyenv/asdf PATH. Used only for restarts.
-    func runInLoginShell(_ script: String) async throws -> CommandResult {
-        try await Subprocess.run(executable: "/bin/zsh", arguments: ["-lc", script])
-    }
 }
 
 // MARK: - SSH

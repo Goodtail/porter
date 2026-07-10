@@ -212,18 +212,59 @@ enum Scanner {
     }
 
     /// Relaunch a process detached from Porter, in its recorded cwd (F4.3).
-    /// With `logPath` (may contain $HOME — expanded by the remote shell),
-    /// output goes to a Porter-managed log so it becomes live-streamable.
+    ///
+    /// The command runs under `$SHELL -lc` so nvm/brew PATH from the user's
+    /// login profile is available — critical over SSH, where the session shell
+    /// is non-login and `node` is typically not on PATH. After spawning we
+    /// verify the process survived 1.2s; if it died instantly we say so and
+    /// emit the log tail instead of reporting fake success.
     static func restartScript(command: String, cwd: String, logPath: String?) -> String {
         let quotedCwd = shellQuote(cwd)
-        guard let logPath else {
-            return "cd \(quotedCwd) && nohup \(command) >/dev/null 2>&1 & echo $!"
+        let quotedCommand = shellQuote(command)
+        let logSetup: String
+        let redirect: String
+        let deadDiagnostics: String
+        if let logPath {
+            logSetup = "LOG=\"\(logPath)\"\nmkdir -p \"$(dirname \"$LOG\")\"\n"
+            redirect = ">>\"$LOG\" 2>&1"
+            deadDiagnostics = "tail -n 5 \"$LOG\" 2>/dev/null"
+        } else {
+            logSetup = ""
+            redirect = ">/dev/null 2>&1"
+            deadDiagnostics = ""
         }
         return """
-        LOG="\(logPath)"
-        mkdir -p "$(dirname "$LOG")"
-        cd \(quotedCwd) && nohup \(command) >>"$LOG" 2>&1 & echo $!
+        \(logSetup)cd \(quotedCwd) || { echo PORTER_CDFAIL; exit 0; }
+        nohup "${SHELL:-/bin/sh}" -lc \(quotedCommand) \(redirect) &
+        PORTER_PID=$!
+        sleep 1.2
+        if kill -0 $PORTER_PID 2>/dev/null; then
+          echo "PORTER_OK $PORTER_PID"
+        else
+          echo PORTER_DEAD
+          \(deadDiagnostics)
+        fi
         """
+    }
+
+    enum RestartOutcome: Equatable {
+        case started(pid: String)
+        case diedInstantly(logTail: String)
+        case badDirectory
+    }
+
+    static func parseRestartResult(_ output: String) -> RestartOutcome? {
+        let lines = output.split(separator: "\n").map(String.init)
+        if lines.contains("PORTER_CDFAIL") { return .badDirectory }
+        if let ok = lines.first(where: { $0.hasPrefix("PORTER_OK") }) {
+            return .started(pid: ok.replacingOccurrences(of: "PORTER_OK", with: "")
+                .trimmingCharacters(in: .whitespaces))
+        }
+        if let deadIndex = lines.firstIndex(of: "PORTER_DEAD") {
+            let tail = lines.dropFirst(deadIndex + 1).joined(separator: " · ")
+            return .diedInstantly(logTail: tail)
+        }
+        return nil
     }
 
     static func tailScript(file: String, lines: Int = 120) -> String {

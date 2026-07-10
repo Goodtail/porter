@@ -239,7 +239,15 @@ struct RestartConfirmSheet: View {
         .frame(width: 520)
         .background(Theme.surface)
         .onAppear {
-            baseCommand = state.detail?.fullCommand ?? ""
+            let recorded = state.detail?.fullCommand ?? ""
+            let devCommand = state.projects[entry.pid]?.devCommand
+            // "next-server (v15.3.2)" is a rewritten process title, not a
+            // runnable command — substitute the project's dev script.
+            if ProjectInspector.looksLikeRetitledProcess(recorded), let devCommand {
+                baseCommand = devCommand
+            } else {
+                baseCommand = recorded
+            }
             command = baseCommand
             cwd = state.detail?.cwd ?? ""
             portText = String(entry.port)

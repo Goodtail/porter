@@ -35,7 +35,8 @@ enum DemoData {
     ]
 
     static let projects: [Int: ProjectInfo] = [
-        48213: ProjectInfo(name: "acme-web", framework: "Next.js", category: .frontend),
+        48213: ProjectInfo(name: "acme-web", framework: "Next.js", category: .frontend,
+                           devCommand: "npm run dev"),
         48371: ProjectInfo(name: "acme-admin", framework: "Vite", category: .frontend),
         49118: ProjectInfo(name: "acme-api", framework: "FastAPI", category: .backend),
         47552: ProjectInfo(name: "research", framework: "Jupyter", category: .ai),

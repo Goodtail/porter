@@ -105,6 +105,16 @@ private struct HistoryRow: View {
                         .font(Theme.ui(10.5, weight: .semibold))
                 }
                 .buttonStyle(PorterButtonStyle(tint: Theme.green))
+
+                Button {
+                    state.deleteHistory(record.id)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Theme.textFaint)
+                }
+                .buttonStyle(.plain)
+                .help("이력에서 삭제")
             }
         }
         .padding(.horizontal, 12)
@@ -237,7 +247,12 @@ struct RelaunchSheet: View {
         .frame(width: 520)
         .background(Theme.surface)
         .onAppear {
-            command = record.fullCommand
+            if ProjectInspector.looksLikeRetitledProcess(record.fullCommand),
+               let devCommand = record.devCommand {
+                command = devCommand
+            } else {
+                command = record.fullCommand
+            }
             cwd = record.cwd
             portText = String(record.port)
         }
