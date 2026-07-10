@@ -23,6 +23,12 @@ final class AppState: ObservableObject {
     @Published var logPreview: String?
     @Published var logPreviewFile: String?
 
+    // MARK: Live log streaming
+    @Published var liveLogLines: [String] = []
+    @Published var isStreamingLog = false
+    @Published var streamingFile: String?
+    private var logStream: LogStream?
+
     // MARK: Project intelligence
     /// pid → detected project info, for the currently selected target.
     @Published var projects: [Int: ProjectInfo] = [:]
@@ -132,6 +138,7 @@ final class AppState: ObservableObject {
         detail = nil
         logPreview = nil
         logPreviewFile = nil
+        stopLogStream()
         scanError = nil
         if isDemo {
             ports = DemoData.ports
@@ -400,6 +407,7 @@ final class AppState: ObservableObject {
         detail = nil
         logPreview = nil
         logPreviewFile = nil
+        stopLogStream()
         guard let entry else { return }
         if isDemo {
             detail = DemoData.detail(for: entry)
@@ -424,6 +432,7 @@ final class AppState: ObservableObject {
 
     func loadLogPreview(file: String) {
         let target = selectedTarget
+        stopLogStream()
         logPreviewFile = file
         logPreview = nil
         if isDemo {
@@ -439,6 +448,50 @@ final class AppState: ObservableObject {
                 logPreview = "로그를 읽을 수 없습니다: \(error.localizedDescription)"
             }
         }
+    }
+
+    // MARK: - Live log streaming (tail -F)
+
+    func startLogStream(file: String) {
+        stopLogStream()
+        logPreview = nil
+        logPreviewFile = file
+        if isDemo {
+            // Demo: replay the canned tail as if it were streaming.
+            liveLogLines = DemoData.logTail.components(separatedBy: "\n")
+            streamingFile = file
+            isStreamingLog = true
+            return
+        }
+        liveLogLines = []
+        streamingFile = file
+        isStreamingLog = true
+
+        let script = "tail -n 60 -F \(Scanner.shellQuote(file)) 2>/dev/null"
+        let stream = LogStream(target: selectedTarget, script: script)
+        stream.onLine = { [weak self] line in
+            guard let self, self.streamingFile == file else { return }
+            self.liveLogLines.append(line)
+            if self.liveLogLines.count > 500 {
+                self.liveLogLines.removeFirst(self.liveLogLines.count - 500)
+            }
+        }
+        stream.onEnd = { [weak self] error in
+            guard let self, self.streamingFile == file else { return }
+            self.isStreamingLog = false
+            if let error { self.log(.warning, "라이브 로그 중단: \(error)") }
+        }
+        logStream = stream
+        stream.start()
+        log(.info, "라이브 로그 시작: \((file as NSString).lastPathComponent)")
+    }
+
+    func stopLogStream() {
+        logStream?.stop()
+        logStream = nil
+        if isStreamingLog { log(.info, "라이브 로그 중지") }
+        isStreamingLog = false
+        streamingFile = nil
     }
 
     // MARK: - Control (F4)
@@ -479,7 +532,9 @@ final class AppState: ObservableObject {
     }
 
     /// Kill + relaunch with the recorded command in the recorded cwd.
-    func restart(_ entry: PortEntry, command: String, cwd: String) async {
+    /// `logPath` (Porter-managed, $HOME-relative) makes the new process's
+    /// output live-streamable; nil discards output as before.
+    func restart(_ entry: PortEntry, command: String, cwd: String, logPath: String?) async {
         guard !isDemo else {
             log(.info, "(demo) 재시작: \(entry.command) :\(entry.port)")
             return
@@ -492,7 +547,7 @@ final class AppState: ObservableObject {
             _ = try await runner.run(Scanner.killScript(pid: entry.pid, force: false))
             try? await Task.sleep(nanoseconds: 1_500_000_000)
 
-            let script = Scanner.restartScript(command: command, cwd: cwd)
+            let script = Scanner.restartScript(command: command, cwd: cwd, logPath: logPath)
             let result: CommandResult
             if let local = runner as? LocalRunner {
                 result = try await local.runInLoginShell(script)

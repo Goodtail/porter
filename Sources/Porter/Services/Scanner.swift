@@ -212,9 +212,18 @@ enum Scanner {
     }
 
     /// Relaunch a process detached from Porter, in its recorded cwd (F4.3).
-    static func restartScript(command: String, cwd: String) -> String {
+    /// With `logPath` (may contain $HOME — expanded by the remote shell),
+    /// output goes to a Porter-managed log so it becomes live-streamable.
+    static func restartScript(command: String, cwd: String, logPath: String?) -> String {
         let quotedCwd = shellQuote(cwd)
-        return "cd \(quotedCwd) && nohup \(command) >/dev/null 2>&1 & echo $!"
+        guard let logPath else {
+            return "cd \(quotedCwd) && nohup \(command) >/dev/null 2>&1 & echo $!"
+        }
+        return """
+        LOG="\(logPath)"
+        mkdir -p "$(dirname "$LOG")"
+        cd \(quotedCwd) && nohup \(command) >>"$LOG" 2>&1 & echo $!
+        """
     }
 
     static func tailScript(file: String, lines: Int = 120) -> String {

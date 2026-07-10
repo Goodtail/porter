@@ -105,6 +105,26 @@ struct SSHRunner: CommandRunner {
     let target: Target
 
     func run(_ script: String) async throws -> CommandResult {
+        let invocation = CommandInvocation.build(for: target, script: script)
+        return try await Subprocess.run(executable: invocation.executable,
+                                        arguments: invocation.arguments,
+                                        environment: invocation.environment)
+    }
+}
+
+/// How to execute a script on a target — shared by one-shot runners and
+/// long-lived streams (tail -F) so auth/ControlMaster behavior is identical.
+struct CommandInvocation {
+    let executable: String
+    let arguments: [String]
+    let environment: [String: String]?
+
+    static func build(for target: Target, script: String) -> CommandInvocation {
+        if target.isLocal {
+            return CommandInvocation(executable: "/bin/zsh",
+                                     arguments: ["-c", script], environment: nil)
+        }
+
         var args = [
             "-o", "ConnectTimeout=6",
             "-o", "StrictHostKeyChecking=accept-new",
@@ -131,9 +151,8 @@ struct SSHRunner: CommandRunner {
         }
         args.append(target.sshDestination)
         args.append(script)
-
-        return try await Subprocess.run(executable: "/usr/bin/ssh", arguments: args,
-                                        environment: environment)
+        return CommandInvocation(executable: "/usr/bin/ssh", arguments: args,
+                                 environment: environment)
     }
 }
 

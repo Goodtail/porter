@@ -117,6 +117,23 @@ struct RestartConfirmSheet: View {
 
     @State private var command: String = ""
     @State private var cwd: String = ""
+    @State private var portText: String = ""
+    @State private var captureLog = true
+    /// The untouched original — port rewrites always re-derive from this.
+    @State private var baseCommand: String = ""
+
+    private var newPort: Int? { Int(portText.trimmingCharacters(in: .whitespaces)) }
+    private var portChanged: Bool { newPort != nil && newPort != entry.port }
+    private var portValid: Bool { newPort.map { (1...65535).contains($0) } ?? false }
+
+    private var logPath: String? {
+        guard captureLog else { return nil }
+        return PortRewriter.managedLogPath(
+            name: state.projects[entry.pid]?.name,
+            command: entry.command,
+            port: newPort ?? entry.port
+        )
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -125,7 +142,7 @@ struct RestartConfirmSheet: View {
                     .font(.system(size: 22))
                     .foregroundStyle(Theme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("프로세스를 재시작할까요?")
+                    Text(portChanged ? "포트를 옮겨 재시작할까요?" : "프로세스를 재시작할까요?")
                         .font(Theme.ui(15, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
                     Text("SIGTERM으로 종료한 뒤, 아래 디렉토리에서 명령어를 다시 실행합니다 (nohup, 백그라운드).")
@@ -135,16 +152,46 @@ struct RestartConfirmSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("WORKING DIRECTORY")
-                        .font(Theme.ui(9.5, weight: .bold))
-                        .foregroundStyle(Theme.textFaint)
-                    TextField("", text: $cwd)
-                        .textFieldStyle(.plain)
-                        .font(Theme.mono(11.5))
-                        .padding(8)
-                        .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("PORT")
+                            .font(Theme.ui(9.5, weight: .bold))
+                            .foregroundStyle(Theme.textFaint)
+                        TextField("\(entry.port)", text: $portText)
+                            .textFieldStyle(.plain)
+                            .font(Theme.mono(12, weight: .semibold))
+                            .foregroundStyle(portChanged ? Theme.green : Theme.textPrimary)
+                            .padding(8)
+                            .frame(width: 90)
+                            .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
+                            .overlay(RoundedRectangle(cornerRadius: 6)
+                                .stroke(portChanged ? Theme.green.opacity(0.5) : Theme.border, lineWidth: 1))
+                            .onChange(of: portText) { _, _ in
+                                // Re-derive from the original so edits don't stack.
+                                if let port = newPort, portValid {
+                                    command = PortRewriter.rewrite(command: baseCommand,
+                                                                   from: entry.port, to: port)
+                                } else {
+                                    command = baseCommand
+                                }
+                            }
+                        if portChanged {
+                            Text(":\(entry.port) → :\(portText)")
+                                .font(Theme.mono(9.5))
+                                .foregroundStyle(Theme.green)
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("WORKING DIRECTORY")
+                            .font(Theme.ui(9.5, weight: .bold))
+                            .foregroundStyle(Theme.textFaint)
+                        TextField("", text: $cwd)
+                            .textFieldStyle(.plain)
+                            .font(Theme.mono(11.5))
+                            .padding(8)
+                            .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
+                    }
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("COMMAND (수정 가능)")
@@ -158,6 +205,12 @@ struct RestartConfirmSheet: View {
                         .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
                 }
+                Toggle(isOn: $captureLog) {
+                    Text("출력을 Porter 로그로 기록 — 재시작 후 라이브 로그 사용 가능 (~/.porter/logs)")
+                        .font(Theme.ui(11))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .toggleStyle(.checkbox)
             }
 
             HStack {
@@ -166,25 +219,30 @@ struct RestartConfirmSheet: View {
                     .buttonStyle(PorterButtonStyle())
                     .keyboardShortcut(.cancelAction)
                 Button {
-                    let cmd = command, dir = cwd
+                    let cmd = command, dir = cwd, log = logPath
                     Task {
-                        await state.restart(entry, command: cmd, cwd: dir)
+                        await state.restart(entry, command: cmd, cwd: dir, logPath: log)
                         state.restartCandidate = nil
                     }
                 } label: {
-                    Label("Kill & Restart", systemImage: "arrow.clockwise")
+                    Label(portChanged ? "Kill & Restart on :\(portText)" : "Kill & Restart",
+                          systemImage: "arrow.clockwise")
                 }
-                .buttonStyle(PorterButtonStyle(tint: Theme.accent, prominent: true))
-                .disabled(state.isActing || command.trimmingCharacters(in: .whitespaces).isEmpty
+                .buttonStyle(PorterButtonStyle(tint: portChanged ? Theme.green : Theme.accent,
+                                               prominent: true))
+                .disabled(state.isActing || !portValid
+                          || command.trimmingCharacters(in: .whitespaces).isEmpty
                           || cwd.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .padding(18)
-        .frame(width: 480)
+        .frame(width: 520)
         .background(Theme.surface)
         .onAppear {
-            command = state.detail?.fullCommand ?? ""
+            baseCommand = state.detail?.fullCommand ?? ""
+            command = baseCommand
             cwd = state.detail?.cwd ?? ""
+            portText = String(entry.port)
         }
     }
 }

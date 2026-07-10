@@ -241,6 +241,63 @@ final class ScannerTests: XCTestCase {
         XCTAssertEqual(info?.category, .backend)
     }
 
+    // MARK: port rewriting (restart on a different port)
+
+    func testPortRewriter() {
+        XCTAssertEqual(
+            PortRewriter.rewrite(command: "next dev --port 3000", from: 3000, to: 3001),
+            "next dev --port 3001")
+        XCTAssertEqual(
+            PortRewriter.rewrite(command: "next dev --port=3000", from: 3000, to: 4000),
+            "next dev --port=4000")
+        XCTAssertEqual(
+            PortRewriter.rewrite(command: "next dev -p 3000", from: 3000, to: 3005),
+            "next dev -p 3005")
+        XCTAssertEqual(
+            PortRewriter.rewrite(command: "PORT=3000 node server.js", from: 3000, to: 8080),
+            "PORT=8080 node server.js")
+        // No recognizable port in the command → PORT env prefix fallback.
+        XCTAssertEqual(
+            PortRewriter.rewrite(command: "node server.js", from: 3000, to: 3001),
+            "PORT=3001 node server.js")
+        // Unrelated numbers must not be touched.
+        XCTAssertEqual(
+            PortRewriter.rewrite(command: "node server.js --workers 3000x --port 3000", from: 3000, to: 3001),
+            "node server.js --workers 3000x --port 3001")
+        // Same port → unchanged.
+        XCTAssertEqual(
+            PortRewriter.rewrite(command: "next dev", from: 3000, to: 3000),
+            "next dev")
+    }
+
+    func testManagedLogPath() {
+        XCTAssertEqual(
+            PortRewriter.managedLogPath(name: "acme-web", command: "node", port: 3001),
+            "$HOME/.porter/logs/acme-web-3001.log")
+        XCTAssertEqual(
+            PortRewriter.managedLogPath(name: nil, command: "python3.12 -m uvicorn", port: 8000),
+            "$HOME/.porter/logs/python3-12-8000.log")
+    }
+
+    // MARK: log streaming
+
+    func testLogStreamDeliversLines() {
+        let expectation = expectation(description: "lines")
+        var lines: [String] = []
+        let stream = LogStream(target: .local,
+                               script: "printf 'one\\ntwo\\n'; sleep 0.1; printf 'three\\n'")
+        Task { @MainActor in
+            stream.onLine = { line in
+                lines.append(line)
+                if lines.count == 3 { expectation.fulfill() }
+            }
+            stream.start()
+        }
+        wait(for: [expectation], timeout: 5)
+        XCTAssertEqual(lines, ["one", "two", "three"])
+        stream.stop()
+    }
+
     // MARK: tailscale
 
     func testParseTailscaleIP() {

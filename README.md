@@ -47,6 +47,14 @@ into a couple of clicks. Remote machines get **exactly the same UX as localhost*
   you the offender or tells you the port is free to use
 - **Process inspector** — full command line, working directory (both copyable),
   CPU/MEM, start time, plus auto-detected open log files with a tail preview
+- **Live log streaming** — follow any detected log file in real time (`tail -F`,
+  local or over SSH). Processes restarted through Porter get their output
+  captured to `~/.porter/logs/` — instantly streamable even if they used to log
+  only to a terminal
+- **Move to another port** — the restart sheet has a PORT field: Porter rewrites
+  `--port 3000` / `-p 3000` / `PORT=3000` in the command (or prepends `PORT=`),
+  shows you the result, and relaunches — "3000 is taken, run it on 3001" is now
+  one button
 
 ![Porter detail panel](docs/screenshot-detail.png)
 

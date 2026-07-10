@@ -222,35 +222,55 @@ struct DetailPanel: View {
                 .foregroundStyle(Theme.textFaint)
 
             if detail.logFiles.isEmpty {
-                Text("열려 있는 로그 파일이 감지되지 않았습니다")
+                Text("열려 있는 로그 파일이 감지되지 않았습니다.\nPorter로 Restart하면 출력이 ~/.porter/logs에 기록되어 라이브 로그를 볼 수 있습니다.")
                     .font(Theme.ui(11))
                     .foregroundStyle(Theme.textFaint)
             } else {
                 ForEach(detail.logFiles, id: \.self) { file in
-                    Button {
-                        state.loadLogPreview(file: file)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "doc.text")
-                                .font(.system(size: 10))
-                            Text((file as NSString).lastPathComponent)
-                                .font(Theme.mono(11))
-                                .lineLimit(1)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 8, weight: .bold))
+                    HStack(spacing: 6) {
+                        Button {
+                            state.loadLogPreview(file: file)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "doc.text")
+                                    .font(.system(size: 10))
+                                Text((file as NSString).lastPathComponent)
+                                    .font(Theme.mono(11))
+                                    .lineLimit(1)
+                                Spacer()
+                            }
+                            .foregroundStyle(state.logPreviewFile == file ? Theme.accent : Theme.textSecondary)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 6)
+                            .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
+                            .contentShape(Rectangle())
                         }
-                        .foregroundStyle(state.logPreviewFile == file ? Theme.accent : Theme.textSecondary)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 6)
-                        .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
-                        .contentShape(Rectangle())
+                        .buttonStyle(.plain)
+                        .help(file)
+
+                        // Live follow (tail -F) toggle
+                        Button {
+                            if state.isStreamingLog && state.streamingFile == file {
+                                state.stopLogStream()
+                            } else {
+                                state.startLogStream(file: file)
+                            }
+                        } label: {
+                            Image(systemName: state.isStreamingLog && state.streamingFile == file
+                                  ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 15))
+                                .foregroundStyle(state.isStreamingLog && state.streamingFile == file
+                                                 ? Theme.green : Theme.textSecondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(state.isStreamingLog && state.streamingFile == file
+                              ? "라이브 로그 중지" : "라이브 로그 (tail -F)")
                     }
-                    .buttonStyle(.plain)
-                    .help(file)
                 }
 
-                if state.logPreviewFile != nil {
+                if state.isStreamingLog || state.streamingFile != nil {
+                    liveLogView
+                } else if state.logPreviewFile != nil {
                     ScrollView {
                         Text(state.logPreview ?? "불러오는 중…")
                             .font(Theme.mono(10))
@@ -262,6 +282,49 @@ struct DetailPanel: View {
                     .frame(height: 150)
                     .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
+                }
+            }
+        }
+    }
+
+    /// Auto-scrolling live tail with a status line.
+    private var liveLogView: some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 6) {
+                StatusDot(color: state.isStreamingLog ? Theme.green : Theme.textFaint, size: 6)
+                Text(state.isStreamingLog ? "LIVE" : "중지됨")
+                    .font(Theme.ui(9, weight: .bold))
+                    .foregroundStyle(state.isStreamingLog ? Theme.green : Theme.textFaint)
+                    .kerning(0.8)
+                Text("\(state.liveLogLines.count)줄")
+                    .font(Theme.mono(9))
+                    .foregroundStyle(Theme.textFaint)
+                Spacer()
+                Button("지우기") { state.liveLogLines = [] }
+                    .buttonStyle(.plain)
+                    .font(Theme.ui(9.5))
+                    .foregroundStyle(Theme.textFaint)
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 1) {
+                        ForEach(Array(state.liveLogLines.enumerated()), id: \.offset) { index, line in
+                            Text(line.isEmpty ? " " : line)
+                                .font(Theme.mono(10))
+                                .foregroundStyle(Theme.textSecondary)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .id(index)
+                        }
+                    }
+                    .padding(8)
+                }
+                .frame(height: 190)
+                .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6)
+                    .stroke(state.isStreamingLog ? Theme.green.opacity(0.35) : Theme.border, lineWidth: 1))
+                .onChange(of: state.liveLogLines.count) { _, count in
+                    if count > 0 { proxy.scrollTo(count - 1, anchor: .bottom) }
                 }
             }
         }
