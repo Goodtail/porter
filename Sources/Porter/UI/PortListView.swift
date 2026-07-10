@@ -369,6 +369,7 @@ struct PortRow: View {
                 }
             }
             Divider()
+            Button("재시작 · 포트 변경…") { state.requestRestart(entry) }
             Button("Kill (SIGTERM)", role: .destructive) { state.killCandidate = entry }
         }
     }

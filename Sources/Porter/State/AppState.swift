@@ -567,6 +567,22 @@ final class AppState: ObservableObject {
         await refresh()
     }
 
+    /// Row-level entry point for "restart / change port": ensures the detail
+    /// (command, cwd) is loaded before the sheet opens.
+    func requestRestart(_ entry: PortEntry) {
+        if selectedPortID != entry.id { selectPort(entry) }
+        Task {
+            for _ in 0..<30 where detail?.pid != entry.pid {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            guard detail?.cwd != nil else {
+                log(.warning, "\(entry.command) (PID \(entry.pid)): 작업 디렉토리를 알 수 없어 재시작할 수 없습니다")
+                return
+            }
+            restartCandidate = entry
+        }
+    }
+
     // MARK: - Activity feed
 
     func log(_ kind: ActivityEvent.Kind, _ message: String) {

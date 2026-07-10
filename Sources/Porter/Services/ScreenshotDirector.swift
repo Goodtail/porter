@@ -23,15 +23,24 @@ enum ScreenshotDirector {
 
         capture(window, to: directory + "/screenshot-overview.png")
 
-        // Second shot: dev port selected, detail panel + log tail open.
+        // Second shot: dev port selected, detail panel with LIVE log follow.
         if let next = state.ports.first(where: { $0.port == 3000 }) {
             state.selectPort(next)
             if let log = state.detail?.logFiles.first {
-                state.loadLogPreview(file: log)
+                state.startLogStream(file: log)
             }
         }
         try? await Task.sleep(nanoseconds: 800_000_000)
         capture(window, to: directory + "/screenshot-detail.png")
+
+        // Third shot: the restart sheet with its PORT field (moved to :3001).
+        if let next = state.ports.first(where: { $0.port == 3000 }) {
+            state.restartCandidate = next
+        }
+        try? await Task.sleep(nanoseconds: 900_000_000)
+        if let sheet = window.attachedSheet {
+            capture(sheet, to: directory + "/screenshot-restart.png")
+        }
 
         NSApp.terminate(nil)
     }
