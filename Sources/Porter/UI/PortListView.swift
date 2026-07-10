@@ -109,6 +109,14 @@ struct PortListView: View {
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(2)
             Spacer()
+            if !state.selectedTarget.isLocal, SSHAuth.canRetryWithPassword(message) {
+                Button {
+                    state.reopenPasswordPrompt()
+                } label: {
+                    Label("비밀번호 입력", systemImage: "key.fill")
+                }
+                .buttonStyle(PorterButtonStyle(tint: Theme.amber))
+            }
             Button("재시도") { Task { await state.refresh() } }
                 .buttonStyle(PorterButtonStyle(tint: Theme.red))
         }

@@ -65,7 +65,9 @@ struct SidebarView: View {
                 Divider().overlay(Theme.border)
                 HStack(spacing: 6) {
                     StatusDot(color: state.autoRefresh ? Theme.green : Theme.textFaint, size: 6)
-                    Text(state.autoRefresh ? "5초마다 자동 새로고침" : "자동 새로고침 꺼짐")
+                    Text(state.autoRefresh
+                         ? "\(state.refreshIntervalSeconds)초마다 자동 새로고침"
+                         : "자동 새로고침 꺼짐")
                         .font(Theme.ui(10))
                         .foregroundStyle(Theme.textFaint)
                 }

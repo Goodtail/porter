@@ -189,6 +189,90 @@ struct RestartConfirmSheet: View {
     }
 }
 
+// MARK: - SSH password prompt
+
+/// Shown when a host rejects key auth but accepts passwords. The password is
+/// kept in memory for the session; Keychain persistence is opt-in.
+struct PasswordPromptSheet: View {
+    @EnvironmentObject var state: AppState
+    let target: Target
+
+    @State private var password = ""
+    @State private var saveToKeychain = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "key.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Theme.amber)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("SSH 비밀번호 필요")
+                        .font(Theme.ui(15, weight: .bold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("\(target.subtitle) — 키 인증이 거부되어 비밀번호로 접속합니다.")
+                        .font(Theme.ui(11.5))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+
+            if let error = state.passwordPromptError {
+                HStack(spacing: 7) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                    Text(error)
+                        .font(Theme.ui(11.5))
+                }
+                .foregroundStyle(Theme.red)
+                .padding(9)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.red.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
+            }
+
+            SecureField("비밀번호", text: $password)
+                .textFieldStyle(.plain)
+                .font(Theme.mono(13))
+                .padding(9)
+                .background(Theme.background, in: RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.border, lineWidth: 1))
+                .onSubmit(submit)
+
+            Toggle(isOn: $saveToKeychain) {
+                Text("macOS Keychain에 저장 (다음 실행에서 자동 사용)")
+                    .font(Theme.ui(11.5))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .toggleStyle(.checkbox)
+
+            HStack {
+                Text("비밀번호는 ssh에 환경 변수로만 전달되며 디스크에 남지 않습니다.")
+                    .font(Theme.ui(10))
+                    .foregroundStyle(Theme.textFaint)
+                Spacer()
+                Button("취소") { state.cancelPasswordPrompt() }
+                    .buttonStyle(PorterButtonStyle())
+                    .keyboardShortcut(.cancelAction)
+                Button {
+                    submit()
+                } label: {
+                    Label("연결", systemImage: "bolt.horizontal.fill")
+                }
+                .buttonStyle(PorterButtonStyle(tint: Theme.accent, prominent: true))
+                .disabled(password.isEmpty)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(18)
+        .frame(width: 440)
+        .background(Theme.surface)
+    }
+
+    private func submit() {
+        guard !password.isEmpty else { return }
+        state.submitPassword(password, saveToKeychain: saveToKeychain)
+    }
+}
+
 // MARK: - Add SSH target (F1.3)
 
 struct AddTargetSheet: View {

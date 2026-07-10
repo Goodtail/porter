@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 
@@ -32,8 +33,19 @@ final class AppState: ObservableObject {
     @Published var showAddTarget = false
     @Published var isActing = false               // kill/restart in flight
 
+    // MARK: SSH password prompt
+    @Published var passwordPromptTarget: Target?  // opens PasswordPromptSheet
+    @Published var passwordPromptError: String?
+    /// Targets whose last scan failed on auth — auto-refresh holds off until
+    /// a password arrives, so the timer doesn't spam failures or re-open sheets.
+    private var authBlocked: Set<Target.ID> = []
+
     private var timer: Timer?
     private var scanGeneration = 0
+    /// Local PIDs watched via kqueue for instant exit detection.
+    private var processWatchers: [Int: DispatchSourceProcess] = [:]
+    /// Window occlusion — no point polling while nobody can see the result.
+    private var windowVisible = true
 
     init() {
         var all: [Target] = [.local]
@@ -41,6 +53,21 @@ final class AppState: ObservableObject {
         all += TargetStore.load()
         targets = all
         configureTimer()
+
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeOcclusionStateNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let visible = NSApp.occlusionState.contains(.visible)
+                let becameVisible = visible && !self.windowVisible
+                self.windowVisible = visible
+                if becameVisible, !self.isScanning, !self.isActing {
+                    await self.refresh() // catch up immediately on re-focus
+                }
+            }
+        }
     }
 
     var selectedTarget: Target {
@@ -82,6 +109,16 @@ final class AppState: ObservableObject {
         logPreview = nil
         logPreviewFile = nil
         scanError = nil
+        authBlocked.remove(target.id)
+        clearProcessWatchers()
+
+        // Saved password from a previous session? Load it before first contact.
+        if !target.isLocal, SSHPasswordVault.shared.password(for: target.id) == nil,
+           let stored = Keychain.load(account: SSHAuth.keychainAccount(for: target)) {
+            SSHPasswordVault.shared.set(stored, for: target.id)
+        }
+
+        configureTimer() // interval differs for local vs remote
         Task { await refresh() }
     }
 
@@ -99,6 +136,8 @@ final class AppState: ObservableObject {
         guard target.kind == .ssh, !target.fromSSHConfig else { return }
         targets.removeAll { $0.id == target.id }
         TargetStore.save(targets)
+        SSHPasswordVault.shared.set(nil, for: target.id)
+        Keychain.delete(account: SSHAuth.keychainAccount(for: target))
         if selectedTargetID == target.id { select(target: .local) }
     }
 
@@ -122,6 +161,7 @@ final class AppState: ObservableObject {
             let changed = newPorts.map(\.id) != ports.map(\.id)
             ports = newPorts
             scanError = nil
+            authBlocked.remove(target.id)
             connectionStates[target.id] = .connected
             lastScanDate = Date()
             if changed { log(.info, "스캔: LISTEN 포트 \(newPorts.count)개") }
@@ -130,25 +170,111 @@ final class AppState: ObservableObject {
                 selectedPortID = nil
                 detail = nil
             }
+            // Local processes get push-based exit detection on top of polling.
+            if target.isLocal {
+                syncProcessWatchers(pids: Set(newPorts.map(\.pid).filter { $0 > 0 }))
+            }
         } catch {
             guard generation == scanGeneration, target.id == selectedTargetID else { return }
             let message = error.localizedDescription
             scanError = message
             connectionStates[target.id] = .failed(message)
             log(.error, "스캔 실패: \(message)")
+
+            // Auth failure on a target whose server accepts passwords → prompt (F1.5+).
+            if !target.isLocal, SSHAuth.canRetryWithPassword(message) {
+                let hadPassword = SSHPasswordVault.shared.password(for: target.id) != nil
+                let firstFailure = !authBlocked.contains(target.id)
+                authBlocked.insert(target.id)
+                if passwordPromptTarget == nil, firstFailure {
+                    passwordPromptError = hadPassword
+                        ? "인증에 실패했습니다 — 비밀번호를 다시 확인하세요."
+                        : nil
+                    passwordPromptTarget = target
+                }
+            }
         }
         isScanning = false
     }
 
+    /// Poll cadence: local snapshots are ~free (3s); remote rides an existing
+    /// ControlMaster session but still crosses the network (6s).
+    var refreshIntervalSeconds: Int { selectedTarget.isLocal ? 3 : 6 }
+
     private func configureTimer() {
         timer?.invalidate()
         guard autoRefresh else { timer = nil; return }
-        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(refreshIntervalSeconds),
+                                     repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, !self.isActing, !self.isScanning else { return }
+                guard self.windowVisible else { return }               // nobody's looking
+                guard self.passwordPromptTarget == nil else { return } // user is typing
+                guard !self.authBlocked.contains(self.selectedTargetID) else { return }
                 await self.refresh()
             }
         }
+    }
+
+    // MARK: - SSH password flow
+
+    func submitPassword(_ password: String, saveToKeychain: Bool) {
+        guard let target = passwordPromptTarget else { return }
+        SSHPasswordVault.shared.set(password, for: target.id)
+        if saveToKeychain {
+            Keychain.save(password, account: SSHAuth.keychainAccount(for: target))
+        }
+        authBlocked.remove(target.id)
+        passwordPromptTarget = nil
+        passwordPromptError = nil
+        Task { await refresh() }
+    }
+
+    func cancelPasswordPrompt() {
+        // Stay authBlocked: the timer won't hammer the host, the error banner
+        // keeps a "비밀번호 입력" affordance for whenever the user is ready.
+        passwordPromptTarget = nil
+        passwordPromptError = nil
+    }
+
+    func reopenPasswordPrompt() {
+        guard !selectedTarget.isLocal else { return }
+        passwordPromptError = nil
+        passwordPromptTarget = selectedTarget
+    }
+
+    // MARK: - kqueue exit watchers (local, push-based)
+
+    /// Watch every displayed local PID with kqueue NOTE_EXIT. A dev server
+    /// dying (or being killed outside Porter) updates the UI immediately,
+    /// independent of the poll interval.
+    private func syncProcessWatchers(pids: Set<Int>) {
+        for (pid, source) in processWatchers where !pids.contains(pid) {
+            source.cancel()
+            processWatchers.removeValue(forKey: pid)
+        }
+        for pid in pids where processWatchers[pid] == nil {
+            let source = DispatchSource.makeProcessSource(
+                identifier: pid_t(pid), eventMask: .exit, queue: .main
+            )
+            source.setEventHandler { [weak self] in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.processWatchers[pid]?.cancel()
+                    self.processWatchers.removeValue(forKey: pid)
+                    let name = self.ports.first { $0.pid == pid }?.command ?? "?"
+                    self.log(.info, "종료 감지: \(name) (PID \(pid)) — 목록 갱신")
+                    if !self.isScanning { await self.refresh() }
+                }
+            }
+            source.activate()
+            processWatchers[pid] = source
+        }
+    }
+
+    private func clearProcessWatchers() {
+        processWatchers.values.forEach { $0.cancel() }
+        processWatchers.removeAll()
     }
 
     // MARK: - Detail

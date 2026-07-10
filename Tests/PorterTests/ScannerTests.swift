@@ -154,6 +154,60 @@ final class ScannerTests: XCTestCase {
         XCTAssertEqual(Scanner.shellQuote("has'quote"), "'has'\\''quote'")
     }
 
+    // MARK: ssh auth failure detection
+
+    func testCanRetryWithPassword() {
+        // Server offers password/keyboard-interactive → prompting helps.
+        XCTAssertTrue(SSHAuth.canRetryWithPassword(
+            "channu-bot@100.67.83.28: Permission denied (publickey,password,keyboard-interactive)."))
+        XCTAssertTrue(SSHAuth.canRetryWithPassword(
+            "Permission denied (keyboard-interactive)."))
+        // Key-only server — a password can't help, don't prompt.
+        XCTAssertFalse(SSHAuth.canRetryWithPassword(
+            "user@host: Permission denied (publickey)."))
+        // Not an auth failure at all.
+        XCTAssertFalse(SSHAuth.canRetryWithPassword(
+            "ssh: Could not resolve hostname foo: nodename nor servname provided, or not known"))
+        XCTAssertFalse(SSHAuth.canRetryWithPassword(
+            "ssh: connect to host 10.0.0.5 port 22: Operation timed out"))
+    }
+
+    // MARK: askpass helper + keychain roundtrip
+
+    func testAskpassHelperIsCreatedExecutableAndEchoesPassword() throws {
+        let path = SSHAuth.ensureAskpassHelper()
+        var isDir: ObjCBool = false
+        XCTAssertTrue(FileManager.default.fileExists(atPath: path, isDirectory: &isDir))
+        XCTAssertFalse(isDir.boolValue)
+        XCTAssertTrue(FileManager.default.isExecutableFile(atPath: path))
+
+        // Behave exactly as ssh will invoke it: env var in, password on stdout.
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        var env = ProcessInfo.processInfo.environment
+        env["PORTER_SSH_PASSWORD"] = "s3cret'with\"quotes"
+        process.environment = env
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        try process.run()
+        process.waitUntilExit()
+        let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
+        XCTAssertEqual(output, "s3cret'with\"quotes\n")
+    }
+
+    func testKeychainRoundtrip() {
+        let account = "porter-unit-test@example.invalid:22"
+        defer { Keychain.delete(account: account) }
+
+        XCTAssertNil(Keychain.load(account: account))
+        Keychain.save("first", account: account)
+        XCTAssertEqual(Keychain.load(account: account), "first")
+        Keychain.save("second", account: account) // overwrite
+        XCTAssertEqual(Keychain.load(account: account), "second")
+        Keychain.delete(account: account)
+        XCTAssertNil(Keychain.load(account: account))
+    }
+
     // MARK: ssh config
 
     func testSSHConfigParsing() {

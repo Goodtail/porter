@@ -34,5 +34,8 @@ struct ContentView: View {
         .sheet(isPresented: $state.showAddTarget) {
             AddTargetSheet().environmentObject(state)
         }
+        .sheet(item: $state.passwordPromptTarget) { target in
+            PasswordPromptSheet(target: target).environmentObject(state)
+        }
     }
 }

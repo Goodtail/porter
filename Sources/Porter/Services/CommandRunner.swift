@@ -35,13 +35,17 @@ protocol CommandRunner {
 
 enum Subprocess {
     /// Launch an executable, capture stdout/stderr off the main thread.
-    static func run(executable: String, arguments: [String]) async throws -> CommandResult {
+    /// `environment` entries are merged over the inherited environment.
+    static func run(executable: String, arguments: [String],
+                    environment: [String: String]? = nil) async throws -> CommandResult {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: executable)
                 process.arguments = arguments
-                process.environment = ProcessInfo.processInfo.environment
+                var env = ProcessInfo.processInfo.environment
+                environment?.forEach { env[$0.key] = $0.value }
+                process.environment = env
 
                 let outPipe = Pipe()
                 let errPipe = Pipe()
@@ -90,32 +94,46 @@ struct LocalRunner: CommandRunner {
 // MARK: - SSH
 
 /// Runs scripts on a remote host through the system `ssh` binary, reusing the
-/// user's existing keys, agent and ~/.ssh/config. No credentials are stored.
+/// user's existing keys, agent and ~/.ssh/config.
+///
+/// Auth strategy: key/agent first (BatchMode fails fast, no hidden prompts).
+/// When the vault holds a password for this target, BatchMode is lifted and the
+/// password is fed through an SSH_ASKPASS helper — ssh offers no stdin mode.
+/// After the first success, ControlMaster keeps the authenticated session
+/// alive so polling never re-authenticates.
 struct SSHRunner: CommandRunner {
     let target: Target
 
-    /// ControlMaster keeps one TCP+auth session alive so repeated scans are fast.
-    private var baseArguments: [String] {
+    func run(_ script: String) async throws -> CommandResult {
         var args = [
-            "-o", "BatchMode=yes",
             "-o", "ConnectTimeout=6",
             "-o", "StrictHostKeyChecking=accept-new",
             "-o", "ControlMaster=auto",
             "-o", "ControlPath=/tmp/porter-ssh-%r@%h-%p",
-            "-o", "ControlPersist=120",
+            "-o", "ControlPersist=600",
         ]
+        var environment: [String: String]?
+
+        if let password = SSHPasswordVault.shared.password(for: target.id) {
+            args += ["-o", "BatchMode=no", "-o", "NumberOfPasswordPrompts=1"]
+            environment = [
+                "SSH_ASKPASS": SSHAuth.ensureAskpassHelper(),
+                "SSH_ASKPASS_REQUIRE": "force",
+                "DISPLAY": ":0", // belt-and-braces for older ssh that gates askpass on DISPLAY
+                "PORTER_SSH_PASSWORD": password,
+            ]
+        } else {
+            args += ["-o", "BatchMode=yes"]
+        }
+
         if let port = target.port {
             args += ["-p", String(port)]
         }
         args.append(target.sshDestination)
-        return args
-    }
+        args.append(script)
 
-    func run(_ script: String) async throws -> CommandResult {
-        try await Subprocess.run(
-            executable: "/usr/bin/ssh",
-            arguments: baseArguments + [script]
-        )
+        return try await Subprocess.run(executable: "/usr/bin/ssh", arguments: args,
+                                        environment: environment)
     }
 }
 
