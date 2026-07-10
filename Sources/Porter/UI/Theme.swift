@@ -108,7 +108,7 @@ struct CopyableValue: View {
                     copied = true
                     Task { try? await Task.sleep(nanoseconds: 1_200_000_000); copied = false }
                 } label: {
-                    Label(copied ? "복사됨" : "복사", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    Label(copied ? L("복사됨") : L("복사"), systemImage: copied ? "checkmark" : "doc.on.doc")
                         .font(Theme.ui(10))
                         .foregroundStyle(copied ? Theme.green : Theme.textSecondary)
                 }

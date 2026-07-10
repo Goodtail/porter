@@ -27,7 +27,7 @@ struct ContentView: View {
                 return
             }
             if state.isDemo { return } // seeded data, nothing to scan
-            state.log(.info, "Porter 시작")
+            state.log(.info, L("Porter 시작"))
             await state.refresh()
         }
         .sheet(item: $state.killCandidate) { entry in

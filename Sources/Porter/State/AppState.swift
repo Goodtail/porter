@@ -179,7 +179,7 @@ final class AppState: ObservableObject {
                             name: label, host: host, user: user, port: port)
         targets.append(target)
         TargetStore.save(targets)
-        log(.info, "SSH 타깃 추가: \(label)")
+        log(.info, L("SSH 타깃 추가: \(label)"))
         select(target: target)
     }
 
@@ -216,7 +216,7 @@ final class AppState: ObservableObject {
             authBlocked.remove(target.id)
             connectionStates[target.id] = .connected
             lastScanDate = Date()
-            if changed { log(.info, "스캔: LISTEN 포트 \(newPorts.count)개") }
+            if changed { log(.info, L("스캔: LISTEN 포트 \(newPorts.count)개")) }
             // Keep selection stable across refreshes; drop it if the process died.
             if let sel = selectedPortID, !newPorts.contains(where: { $0.id == sel }) {
                 selectedPortID = nil
@@ -240,7 +240,7 @@ final class AppState: ObservableObject {
             let message = error.localizedDescription
             scanError = message
             connectionStates[target.id] = .failed(message)
-            log(.error, "스캔 실패: \(message)")
+            log(.error, L("스캔 실패: \(message)"))
 
             // Auth failure on a target whose server accepts passwords → prompt (F1.5+).
             if !target.isLocal, SSHAuth.canRetryWithPassword(message) {
@@ -249,7 +249,7 @@ final class AppState: ObservableObject {
                 authBlocked.insert(target.id)
                 if passwordPromptTarget == nil, firstFailure {
                     passwordPromptError = hadPassword
-                        ? "인증에 실패했습니다 — 비밀번호를 다시 확인하세요."
+                        ? L("인증에 실패했습니다 — 비밀번호를 다시 확인하세요.")
                         : nil
                     passwordPromptTarget = target
                 }
@@ -309,7 +309,7 @@ final class AppState: ObservableObject {
             let result = try await Runners.runner(for: target).run(Scanner.tailscaleScript)
             if let ip = Scanner.parseTailscaleIP(result.stdout) {
                 tailscaleIPs[target.id] = ip
-                log(.info, "Tailscale 감지: \(ip)")
+                log(.info, L("Tailscale 감지: \(ip)"))
             }
         } catch { /* best-effort */ }
     }
@@ -353,7 +353,7 @@ final class AppState: ObservableObject {
 
     func open(_ portURL: PortURL) {
         NSWorkspace.shared.open(portURL.url)
-        log(.info, "브라우저 열기: \(portURL.url.absoluteString)")
+        log(.info, L("브라우저 열기: \(portURL.url.absoluteString)"))
     }
 
     /// Favicons come from the live service itself (/favicon.ico or the
@@ -405,11 +405,11 @@ final class AppState: ObservableObject {
     /// same cwd, output captured to a Porter-managed log.
     func relaunch(_ record: HistoryEntry, command: String, cwd: String, port: Int) async {
         guard !isDemo else {
-            log(.info, "(demo) 재실행: \(record.command) :\(port)")
+            log(.info, L("(demo) 재실행: \(record.command) :\(port)"))
             return
         }
         guard let target = targets.first(where: { $0.id == record.targetID }) else {
-            log(.error, "재실행 실패: 타깃 '\(record.targetName)'을 찾을 수 없습니다")
+            log(.error, L("재실행 실패: 타깃 '\(record.targetName)'을 찾을 수 없습니다"))
             return
         }
         isActing = true
@@ -422,7 +422,7 @@ final class AppState: ObservableObject {
             let result = try await Runners.runner(for: target).run(script)
             switch Scanner.parseRestartResult(result.stdout) {
             case .started(let newPid):
-                log(.success, "재실행: \(record.command) :\(port) on \(target.name) → 새 PID \(newPid)")
+                log(.success, L("재실행: \(record.command) :\(port) on \(target.name) → 새 PID \(newPid)"))
                 history.removeAll { $0.id == record.id }
                 history.insert(HistoryEntry(id: UUID(), date: Date(), action: .relaunch,
                                             targetID: record.targetID, targetName: record.targetName,
@@ -433,14 +433,15 @@ final class AppState: ObservableObject {
                                             devCommand: record.devCommand), at: 0)
                 HistoryStore.save(history)
             case .diedInstantly(let tail):
-                log(.error, "재실행 직후 종료됨 — \(tail.isEmpty ? "로그 없음" : tail)")
+                let tailText = tail.isEmpty ? L("로그 없음") : tail
+                log(.error, L("재실행 직후 종료됨 — \(tailText)"))
             case .badDirectory:
-                log(.error, "재실행 실패: 디렉토리가 없습니다 — \(cwd)")
+                log(.error, L("재실행 실패: 디렉토리가 없습니다 — \(cwd)"))
             case nil:
                 throw CommandError.failed(exitCode: result.exitCode, stderr: result.stderr)
             }
         } catch {
-            log(.error, "재실행 실패 (\(record.command)): \(error.localizedDescription)")
+            log(.error, L("재실행 실패 (\(record.command)): \(error.localizedDescription)"))
         }
         if target.id == selectedTargetID {
             try? await Task.sleep(nanoseconds: 800_000_000)
@@ -495,7 +496,7 @@ final class AppState: ObservableObject {
                     self.processWatchers[pid]?.cancel()
                     self.processWatchers.removeValue(forKey: pid)
                     let name = self.ports.first { $0.pid == pid }?.command ?? "?"
-                    self.log(.info, "종료 감지: \(name) (PID \(pid)) — 목록 갱신")
+                    self.log(.info, L("종료 감지: \(name) (PID \(pid)) — 목록 갱신"))
                     if !self.isScanning { await self.refresh() }
                 }
             }
@@ -535,7 +536,7 @@ final class AppState: ObservableObject {
             detail = Scanner.parseDetail(result.stdout, pid: entry.pid, fallbackUser: entry.user)
         } catch {
             guard selectedPortID == entry.id else { return }
-            log(.error, "상세 조회 실패 (PID \(entry.pid)): \(error.localizedDescription)")
+            log(.error, L("상세 조회 실패 (PID \(entry.pid)): \(error.localizedDescription)"))
         }
     }
 
@@ -552,9 +553,9 @@ final class AppState: ObservableObject {
             do {
                 let result = try await Runners.runner(for: target).run(Scanner.tailScript(file: file))
                 guard logPreviewFile == file else { return }
-                logPreview = result.stdout.isEmpty ? "(비어 있음)" : result.stdout
+                logPreview = result.stdout.isEmpty ? L("(비어 있음)") : result.stdout
             } catch {
-                logPreview = "로그를 읽을 수 없습니다: \(error.localizedDescription)"
+                logPreview = L("로그를 읽을 수 없습니다: \(error.localizedDescription)")
             }
         }
     }
@@ -588,17 +589,20 @@ final class AppState: ObservableObject {
         stream.onEnd = { [weak self] error in
             guard let self, self.streamingFile == file else { return }
             self.isStreamingLog = false
-            if let error { self.log(.warning, "라이브 로그 중단: \(error)") }
+            if let error {
+                let detail = String(describing: error)
+                self.log(.warning, L("라이브 로그 중단: \(detail)"))
+            }
         }
         logStream = stream
         stream.start()
-        log(.info, "라이브 로그 시작: \((file as NSString).lastPathComponent)")
+        log(.info, L("라이브 로그 시작: \((file as NSString).lastPathComponent)"))
     }
 
     func stopLogStream() {
         logStream?.stop()
         logStream = nil
-        if isStreamingLog { log(.info, "라이브 로그 중지") }
+        if isStreamingLog { log(.info, L("라이브 로그 중지")) }
         isStreamingLog = false
         streamingFile = nil
     }
@@ -610,7 +614,7 @@ final class AppState: ObservableObject {
     func kill(_ entry: PortEntry, force: Bool) async -> Bool {
         // Demo PIDs are fictional but could collide with real ones — never signal.
         guard !isDemo else {
-            log(.info, "(demo) 종료: \(entry.command) (PID \(entry.pid))")
+            log(.info, L("(demo) 종료: \(entry.command) (PID \(entry.pid))"))
             return true
         }
         let target = selectedTarget
@@ -637,18 +641,19 @@ final class AppState: ObservableObject {
             let alive = try await runner.run(Scanner.aliveScript(pid: entry.pid))
             let dead = alive.stdout.contains("DEAD")
             if dead {
-                log(.success, "\(force ? "강제 종료" : "종료"): \(entry.command) (PID \(entry.pid), :\(entry.port))")
+                let action = force ? L("강제 종료") : L("종료")
+                log(.success, L("\(action): \(entry.command) (PID \(entry.pid), :\(entry.port))"))
                 if let snapshot, let cwd = snapshot.cwd {
                     recordHistory(action: .kill, entry: entry,
                                   fullCommand: snapshot.fullCommand, cwd: cwd)
                 }
             } else {
-                log(.warning, "\(entry.command) (PID \(entry.pid))가 SIGTERM 후에도 살아있습니다 — Force Kill을 사용하세요")
+                log(.warning, L("\(entry.command) (PID \(entry.pid))가 SIGTERM 후에도 살아있습니다 — Force Kill을 사용하세요"))
             }
             await refresh()
             return dead
         } catch {
-            log(.error, "종료 실패 (PID \(entry.pid)): \(error.localizedDescription)")
+            log(.error, L("종료 실패 (PID \(entry.pid)): \(error.localizedDescription)"))
             await refresh()
             return false
         }
@@ -659,7 +664,7 @@ final class AppState: ObservableObject {
     /// output live-streamable; nil discards output as before.
     func restart(_ entry: PortEntry, command: String, cwd: String, logPath: String?) async {
         guard !isDemo else {
-            log(.info, "(demo) 재시작: \(entry.command) :\(entry.port)")
+            log(.info, L("(demo) 재시작: \(entry.command) :\(entry.port)"))
             return
         }
         let target = selectedTarget
@@ -675,16 +680,17 @@ final class AppState: ObservableObject {
             let result = try await runner.run(script)
             switch Scanner.parseRestartResult(result.stdout) {
             case .started(let newPid):
-                log(.success, "재시작: \(entry.command) :\(entry.port) → 새 PID \(newPid)")
+                log(.success, L("재시작: \(entry.command) :\(entry.port) → 새 PID \(newPid)"))
             case .diedInstantly(let tail):
-                log(.error, "재시작 직후 종료됨 — \(tail.isEmpty ? "로그 없음" : tail)")
+                let tailText = tail.isEmpty ? L("로그 없음") : tail
+                log(.error, L("재시작 직후 종료됨 — \(tailText)"))
             case .badDirectory:
-                log(.error, "재시작 실패: 디렉토리가 없습니다 — \(cwd)")
+                log(.error, L("재시작 실패: 디렉토리가 없습니다 — \(cwd)"))
             case nil:
                 throw CommandError.failed(exitCode: result.exitCode, stderr: result.stderr)
             }
         } catch {
-            log(.error, "재시작 실패 (\(entry.command)): \(error.localizedDescription)")
+            log(.error, L("재시작 실패 (\(entry.command)): \(error.localizedDescription)"))
         }
         try? await Task.sleep(nanoseconds: 800_000_000)
         await refresh()
@@ -699,7 +705,7 @@ final class AppState: ObservableObject {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
             guard detail?.cwd != nil else {
-                log(.warning, "\(entry.command) (PID \(entry.pid)): 작업 디렉토리를 알 수 없어 재시작할 수 없습니다")
+                log(.warning, L("\(entry.command) (PID \(entry.pid)): 작업 디렉토리를 알 수 없어 재시작할 수 없습니다"))
                 return
             }
             restartCandidate = entry

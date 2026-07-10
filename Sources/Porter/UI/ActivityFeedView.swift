@@ -133,7 +133,7 @@ struct ActivityFeedView: View {
     private var historyList: some View {
         if state.history.isEmpty {
             VStack(spacing: 6) {
-                Text("Porter로 kill/재시작한 프로세스가 여기 기록됩니다 — 클릭 한 번으로 다시 실행할 수 있어요.")
+                Text(L("Porter로 kill/재시작한 프로세스가 여기 기록됩니다 — 클릭 한 번으로 다시 실행할 수 있어요."))
                     .font(Theme.ui(11))
                     .foregroundStyle(Theme.textFaint)
             }
@@ -196,7 +196,7 @@ private struct FeedHistoryRow: View {
                 Button {
                     state.relaunchCandidate = record
                 } label: {
-                    Label("재실행", systemImage: "play.fill")
+                    Label(L("재실행"), systemImage: "play.fill")
                         .font(Theme.ui(10, weight: .semibold))
                 }
                 .buttonStyle(PorterButtonStyle(tint: Theme.green))
@@ -209,7 +209,7 @@ private struct FeedHistoryRow: View {
                         .foregroundStyle(Theme.textFaint)
                 }
                 .buttonStyle(.plain)
-                .help("이력에서 삭제")
+                .help(L("이력에서 삭제"))
             }
         }
         .padding(.horizontal, 14)

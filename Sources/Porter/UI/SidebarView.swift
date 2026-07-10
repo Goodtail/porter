@@ -53,7 +53,7 @@ struct SidebarView: View {
                         HStack(spacing: 7) {
                             Image(systemName: "plus")
                                 .font(.system(size: 10, weight: .bold))
-                            Text("SSH 타깃 추가")
+                            Text(L("SSH 타깃 추가"))
                                 .font(Theme.ui(12))
                         }
                         .foregroundStyle(Theme.textSecondary)
@@ -73,8 +73,8 @@ struct SidebarView: View {
                 HStack(spacing: 6) {
                     StatusDot(color: state.autoRefresh ? Theme.green : Theme.textFaint, size: 6)
                     Text(state.autoRefresh
-                         ? "\(state.refreshIntervalSeconds)초마다 자동 새로고침"
-                         : "자동 새로고침 꺼짐")
+                         ? L("\(state.refreshIntervalSeconds)초마다 자동 새로고침")
+                         : L("자동 새로고침 꺼짐"))
                         .font(Theme.ui(10))
                         .foregroundStyle(Theme.textFaint)
                 }
@@ -132,7 +132,7 @@ struct SidebarView: View {
         .buttonStyle(.plain)
         .contextMenu {
             if target.kind == .ssh && !target.fromSSHConfig {
-                Button("타깃 삭제", role: .destructive) { state.removeTarget(target) }
+                Button(L("타깃 삭제"), role: .destructive) { state.removeTarget(target) }
             }
         }
         .help(conn.isFailed ? failureMessage(conn) : target.subtitle)

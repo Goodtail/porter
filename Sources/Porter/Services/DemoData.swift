@@ -138,15 +138,15 @@ enum DemoData {
         let now = Date()
         return [
             ActivityEvent(date: now.addingTimeInterval(-260), kind: .info, targetName: targetName,
-                          message: "Porter 시작"),
+                          message: L("Porter 시작")),
             ActivityEvent(date: now.addingTimeInterval(-255), kind: .info, targetName: targetName,
-                          message: "스캔: LISTEN 포트 7개"),
+                          message: L("스캔: LISTEN 포트 7개")),
             ActivityEvent(date: now.addingTimeInterval(-140), kind: .success, targetName: targetName,
-                          message: "종료: node (PID 51002, :5174)"),
+                          message: L("종료: node (PID 51002, :5174)")),
             ActivityEvent(date: now.addingTimeInterval(-62), kind: .success, targetName: "gpu-server",
-                          message: "재시작: uvicorn :8000 → 새 PID 48844"),
+                          message: L("재시작: uvicorn :8000 → 새 PID 48844")),
             ActivityEvent(date: now.addingTimeInterval(-8), kind: .info, targetName: targetName,
-                          message: "종료 감지: node (PID 50113) — 목록 갱신"),
+                          message: L("종료 감지: node (PID 50113) — 목록 갱신")),
         ]
     }
 }

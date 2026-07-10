@@ -35,7 +35,7 @@ struct PortListView: View {
                         ProgressView().controlSize(.small)
                     }
                 }
-                Text("LISTEN \(state.ports.count)개 포트\(lastScanSuffix)")
+                Text(L("LISTEN \(state.ports.count)개 포트\(lastScanSuffix)"))
                     .font(Theme.ui(10.5))
                     .foregroundStyle(Theme.textFaint)
             }
@@ -47,7 +47,7 @@ struct PortListView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.textFaint)
-                TextField("포트 · 프로세스 · PID 검색", text: $state.searchText)
+                TextField(L("포트 · 프로세스 · PID 검색"), text: $state.searchText)
                     .textFieldStyle(.plain)
                     .font(Theme.mono(12))
                     .foregroundStyle(Theme.textPrimary)
@@ -76,7 +76,7 @@ struct PortListView: View {
                     .foregroundStyle(state.history.isEmpty ? Theme.textFaint : Theme.textSecondary)
             }
             .buttonStyle(PorterButtonStyle())
-            .help("실행 이력 — kill/재시작한 프로세스를 다시 실행")
+            .help(L("실행 이력 — kill/재시작한 프로세스를 다시 실행"))
             .popover(isPresented: $state.showHistory, arrowEdge: .bottom) {
                 HistoryPopover().environmentObject(state)
             }
@@ -89,16 +89,16 @@ struct PortListView: View {
                     .foregroundStyle(state.groupByCategory ? Theme.accent : Theme.textSecondary)
             }
             .buttonStyle(PorterButtonStyle())
-            .help(state.groupByCategory ? "카테고리 그룹 해제" : "카테고리별로 그룹")
+            .help(state.groupByCategory ? L("카테고리 그룹 해제") : L("카테고리별로 그룹"))
 
             Toggle(isOn: $state.autoRefresh) {
-                Text("Auto")
+                Text(L("Auto"))
                     .font(Theme.ui(11, weight: .medium))
             }
             .toggleStyle(.switch)
             .controlSize(.mini)
             .foregroundStyle(Theme.textSecondary)
-            .help("5초마다 자동 새로고침")
+            .help(L("5초마다 자동 새로고침"))
 
             Button {
                 Task { await state.refresh() }
@@ -108,7 +108,7 @@ struct PortListView: View {
             }
             .buttonStyle(PorterButtonStyle())
             .keyboardShortcut("r", modifiers: .command)
-            .help("새로고침 (⌘R)")
+            .help(L("새로고침 (⌘R)"))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -118,7 +118,8 @@ struct PortListView: View {
         guard let date = state.lastScanDate else { return "" }
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
-        return " · 마지막 스캔 \(formatter.string(from: date))"
+        let time = formatter.string(from: date)
+        return L(" · 마지막 스캔 \(time)")
     }
 
     // MARK: Banners
@@ -136,11 +137,11 @@ struct PortListView: View {
                 Button {
                     state.reopenPasswordPrompt()
                 } label: {
-                    Label("비밀번호 입력", systemImage: "key.fill")
+                    Label(L("비밀번호 입력"), systemImage: "key.fill")
                 }
                 .buttonStyle(PorterButtonStyle(tint: Theme.amber))
             }
-            Button("재시도") { Task { await state.refresh() } }
+            Button(L("재시도")) { Task { await state.refresh() } }
                 .buttonStyle(PorterButtonStyle(tint: Theme.red))
         }
         .padding(.horizontal, 16)
@@ -152,13 +153,13 @@ struct PortListView: View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(Theme.green)
-            Text("포트 ")
+            Text(L("포트 "))
                 .font(Theme.ui(12))
                 .foregroundStyle(Theme.textSecondary)
             + Text("\(port)")
                 .font(Theme.mono(12, weight: .bold))
                 .foregroundStyle(Theme.green)
-            + Text("은(는) \(state.selectedTarget.name)에서 비어 있습니다 — 바로 사용 가능")
+            + Text(L("은(는) \(state.selectedTarget.name)에서 비어 있습니다 — 바로 사용 가능"))
                 .font(Theme.ui(12))
                 .foregroundStyle(Theme.textSecondary)
             Spacer()
@@ -253,8 +254,8 @@ struct PortListView: View {
                 .font(.system(size: 28))
                 .foregroundStyle(Theme.textFaint)
             Text(state.searchText.isEmpty
-                 ? "LISTEN 중인 TCP 포트가 없습니다"
-                 : "검색 결과가 없습니다")
+                 ? L("LISTEN 중인 TCP 포트가 없습니다")
+                 : L("검색 결과가 없습니다"))
                 .font(Theme.ui(13))
                 .foregroundStyle(Theme.textSecondary)
         }
@@ -338,7 +339,7 @@ struct PortRow: View {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 8))
                             .foregroundStyle(Theme.textFaint)
-                            .help("루프백 전용 — 외부에서 접근 불가")
+                            .help(L("루프백 전용 — 외부에서 접근 불가"))
                     }
                 }
                 .frame(width: 92, alignment: .leading)
@@ -365,7 +366,7 @@ struct PortRow: View {
                                 .foregroundStyle(Theme.red)
                         }
                         .buttonStyle(.plain)
-                        .help("프로세스 종료")
+                        .help(L("프로세스 종료"))
                     }
                 }
                 .frame(width: 70, alignment: .trailing)
@@ -378,17 +379,17 @@ struct PortRow: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .contextMenu {
-            Button("상세 보기") { state.selectPort(entry) }
+            Button(L("상세 보기")) { state.selectPort(entry) }
             let urls = state.urls(for: entry)
             if !urls.isEmpty {
                 Divider()
                 ForEach(urls) { portURL in
-                    Button("열기: \(portURL.url.absoluteString)") { state.open(portURL) }
+                    Button(L("열기: \(portURL.url.absoluteString)")) { state.open(portURL) }
                 }
             }
             Divider()
-            Button("재시작 · 포트 변경…") { state.requestRestart(entry) }
-            Button("Kill (SIGTERM)", role: .destructive) { state.killCandidate = entry }
+            Button(L("재시작 · 포트 변경…")) { state.requestRestart(entry) }
+            Button(L("Kill (SIGTERM)"), role: .destructive) { state.killCandidate = entry }
         }
     }
 
@@ -421,7 +422,7 @@ struct PortRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("브라우저에서 열기: \(primary.url.absoluteString)")
+            .help(L("브라우저에서 열기: \(primary.url.absoluteString)"))
         } else {
             Text("—")
                 .font(Theme.mono(10.5))

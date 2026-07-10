@@ -28,13 +28,13 @@ struct DetailPanel: View {
                         }
                         openSection
                         statGrid(detail)
-                        CopyableValue(label: "Command", value: detail.fullCommand)
+                        CopyableValue(label: L("Command"), value: detail.fullCommand)
                         if let cwd = detail.cwd {
-                            CopyableValue(label: "Working Directory", value: cwd)
+                            CopyableValue(label: L("Working Directory"), value: cwd)
                         }
                         logSection(detail)
                     } else {
-                        Text("프로세스 정보를 가져올 수 없습니다.\n이미 종료되었을 수 있습니다.")
+                        Text(L("프로세스 정보를 가져올 수 없습니다.\n이미 종료되었을 수 있습니다."))
                             .font(Theme.ui(12))
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.top, 30)
@@ -91,7 +91,7 @@ struct DetailPanel: View {
         HStack(spacing: 8) {
             Image(systemName: "shield.lefthalf.filled")
                 .foregroundStyle(Theme.amber)
-            Text("시스템/보호 프로세스로 보입니다. 종료 시 각별히 주의하세요.")
+            Text(L("시스템/보호 프로세스로 보입니다. 종료 시 각별히 주의하세요."))
                 .font(Theme.ui(11))
                 .foregroundStyle(Theme.amber)
         }
@@ -136,7 +136,7 @@ struct DetailPanel: View {
         let urls = state.urls(for: entry)
         if !urls.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
-                Text("OPEN")
+                Text(L("OPEN"))
                     .font(Theme.ui(10, weight: .semibold))
                     .foregroundStyle(Theme.textFaint)
                 ForEach(urls) { portURL in
@@ -162,15 +162,15 @@ struct DetailPanel: View {
                     }
                     .buttonStyle(.plain)
                     .help(portURL.label == "Tailscale"
-                          ? "Tailscale 네트워크의 다른 기기에서도 접근 가능"
-                          : "브라우저에서 열기")
+                          ? L("Tailscale 네트워크의 다른 기기에서도 접근 가능")
+                          : L("브라우저에서 열기"))
                 }
             }
         } else if !state.selectedTarget.isLocal && entry.isLoopbackOnly {
             HStack(spacing: 7) {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 10))
-                Text("루프백 전용 바인드 — 원격에서 직접 접근할 수 없습니다")
+                Text(L("루프백 전용 바인드 — 원격에서 직접 접근할 수 없습니다"))
                     .font(Theme.ui(11))
             }
             .foregroundStyle(Theme.textFaint)
@@ -217,12 +217,12 @@ struct DetailPanel: View {
     @ViewBuilder
     private func logSection(_ detail: ProcessDetail) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("LOG FILES")
+            Text(L("LOG FILES"))
                 .font(Theme.ui(10, weight: .semibold))
                 .foregroundStyle(Theme.textFaint)
 
             if detail.logFiles.isEmpty {
-                Text("열려 있는 로그 파일이 감지되지 않았습니다.\nPorter로 Restart하면 출력이 ~/.porter/logs에 기록되어 라이브 로그를 볼 수 있습니다.")
+                Text(L("열려 있는 로그 파일이 감지되지 않았습니다.\nPorter로 Restart하면 출력이 ~/.porter/logs에 기록되어 라이브 로그를 볼 수 있습니다."))
                     .font(Theme.ui(11))
                     .foregroundStyle(Theme.textFaint)
             } else {
@@ -264,7 +264,7 @@ struct DetailPanel: View {
                         }
                         .buttonStyle(.plain)
                         .help(state.isStreamingLog && state.streamingFile == file
-                              ? "라이브 로그 중지" : "라이브 로그 (tail -F)")
+                              ? L("라이브 로그 중지") : L("라이브 로그 (tail -F)"))
                     }
                 }
 
@@ -272,7 +272,7 @@ struct DetailPanel: View {
                     liveLogView
                 } else if state.logPreviewFile != nil {
                     ScrollView {
-                        Text(state.logPreview ?? "불러오는 중…")
+                        Text(state.logPreview ?? L("불러오는 중…"))
                             .font(Theme.mono(10))
                             .foregroundStyle(Theme.textSecondary)
                             .textSelection(.enabled)
@@ -292,15 +292,15 @@ struct DetailPanel: View {
         VStack(spacing: 4) {
             HStack(spacing: 6) {
                 StatusDot(color: state.isStreamingLog ? Theme.green : Theme.textFaint, size: 6)
-                Text(state.isStreamingLog ? "LIVE" : "중지됨")
+                Text(state.isStreamingLog ? L("LIVE") : L("중지됨"))
                     .font(Theme.ui(9, weight: .bold))
                     .foregroundStyle(state.isStreamingLog ? Theme.green : Theme.textFaint)
                     .kerning(0.8)
-                Text("\(state.liveLogLines.count)줄")
+                Text(L("\(state.liveLogLines.count)줄"))
                     .font(Theme.mono(9))
                     .foregroundStyle(Theme.textFaint)
                 Spacer()
-                Button("지우기") { state.liveLogLines = [] }
+                Button(L("지우기")) { state.liveLogLines = [] }
                     .buttonStyle(.plain)
                     .font(Theme.ui(9.5))
                     .foregroundStyle(Theme.textFaint)
@@ -337,7 +337,7 @@ struct DetailPanel: View {
             Button {
                 state.killCandidate = entry
             } label: {
-                Label("Kill", systemImage: "stop.fill")
+                Label(L("Kill"), systemImage: "stop.fill")
             }
             .buttonStyle(PorterButtonStyle(tint: Theme.red))
             .disabled(state.isActing || entry.pid <= 0)
@@ -345,11 +345,11 @@ struct DetailPanel: View {
             Button {
                 state.restartCandidate = entry
             } label: {
-                Label("Restart", systemImage: "arrow.clockwise")
+                Label(L("Restart"), systemImage: "arrow.clockwise")
             }
             .buttonStyle(PorterButtonStyle(tint: Theme.accent))
             .disabled(state.isActing || state.detail?.cwd == nil)
-            .help(state.detail?.cwd == nil ? "작업 디렉토리를 알 수 없어 재시작할 수 없습니다" : "kill 후 같은 명령어로 재시작")
+            .help(state.detail?.cwd == nil ? L("작업 디렉토리를 알 수 없어 재시작할 수 없습니다") : L("kill 후 같은 명령어로 재시작"))
 
             Spacer()
             if state.isActing {

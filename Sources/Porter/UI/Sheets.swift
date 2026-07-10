@@ -19,12 +19,12 @@ struct KillConfirmSheet: View {
                     .font(.system(size: 22))
                     .foregroundStyle(Theme.red)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(termFailed ? "프로세스가 아직 살아있습니다" : "프로세스를 종료할까요?")
+                    Text(termFailed ? L("프로세스가 아직 살아있습니다") : L("프로세스를 종료할까요?"))
                         .font(Theme.ui(15, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
                     Text(termFailed
-                         ? "SIGTERM에 응답하지 않았습니다. SIGKILL로 강제 종료할 수 있습니다."
-                         : "확인 후 SIGTERM을 보냅니다. 저장하지 않은 작업은 사라질 수 있습니다.")
+                         ? L("SIGTERM에 응답하지 않았습니다. SIGKILL로 강제 종료할 수 있습니다.")
+                         : L("확인 후 SIGTERM을 보냅니다. 저장하지 않은 작업은 사라질 수 있습니다."))
                         .font(Theme.ui(11.5))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -32,11 +32,11 @@ struct KillConfirmSheet: View {
 
             // What exactly is being killed — the anti-"wrong PID" guard.
             VStack(alignment: .leading, spacing: 6) {
-                factRow("타깃", state.selectedTarget.name + (state.selectedTarget.isLocal ? "" : " (\(state.selectedTarget.subtitle))"))
-                factRow("프로세스", "\(entry.command)  ·  PID \(entry.pid)")
-                factRow("포트", ":\(entry.port)  (\(entry.address))")
+                factRow(L("타깃"), state.selectedTarget.name + (state.selectedTarget.isLocal ? "" : " (\(state.selectedTarget.subtitle))"))
+                factRow(L("프로세스"), "\(entry.command)  ·  PID \(entry.pid)")
+                factRow(L("포트"), ":\(entry.port)  (\(entry.address))")
                 if let cmd = state.detail?.fullCommand {
-                    factRow("명령어", cmd)
+                    factRow(L("명령어"), cmd)
                 }
             }
             .padding(11)
@@ -46,7 +46,7 @@ struct KillConfirmSheet: View {
 
             if isProtected {
                 Toggle(isOn: $acknowledgedProtected) {
-                    Text("시스템/보호 프로세스임을 이해했으며 종료를 원합니다")
+                    Text(L("시스템/보호 프로세스임을 이해했으며 종료를 원합니다"))
                         .font(Theme.ui(11.5))
                         .foregroundStyle(Theme.amber)
                 }
@@ -55,7 +55,7 @@ struct KillConfirmSheet: View {
 
             HStack {
                 Spacer()
-                Button("취소") { state.killCandidate = nil }
+                Button(L("취소")) { state.killCandidate = nil }
                     .buttonStyle(PorterButtonStyle())
                     .keyboardShortcut(.cancelAction)
 
@@ -66,7 +66,7 @@ struct KillConfirmSheet: View {
                             state.killCandidate = nil
                         }
                     } label: {
-                        Label("Force Kill (SIGKILL)", systemImage: "bolt.fill")
+                        Label(L("Force Kill (SIGKILL)"), systemImage: "bolt.fill")
                     }
                     .buttonStyle(PorterButtonStyle(tint: Theme.red, prominent: true))
                     .disabled(state.isActing)
@@ -81,7 +81,7 @@ struct KillConfirmSheet: View {
                             }
                         }
                     } label: {
-                        Label("Kill (SIGTERM)", systemImage: "stop.fill")
+                        Label(L("Kill (SIGTERM)"), systemImage: "stop.fill")
                     }
                     .buttonStyle(PorterButtonStyle(tint: Theme.red, prominent: true))
                     .disabled(state.isActing || (isProtected && !acknowledgedProtected))
@@ -143,10 +143,10 @@ struct RestartConfirmSheet: View {
                     .font(.system(size: 22))
                     .foregroundStyle(Theme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(portChanged ? "포트를 옮겨 재시작할까요?" : "프로세스를 재시작할까요?")
+                    Text(portChanged ? L("포트를 옮겨 재시작할까요?") : L("프로세스를 재시작할까요?"))
                         .font(Theme.ui(15, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("SIGTERM으로 종료한 뒤, 아래 디렉토리에서 명령어를 다시 실행합니다 (nohup, 백그라운드).")
+                    Text(L("SIGTERM으로 종료한 뒤, 아래 디렉토리에서 명령어를 다시 실행합니다 (nohup, 백그라운드)."))
                         .font(Theme.ui(11.5))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -183,7 +183,7 @@ struct RestartConfirmSheet: View {
                         }
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("WORKING DIRECTORY")
+                        Text(L("WORKING DIRECTORY"))
                             .font(Theme.ui(9.5, weight: .bold))
                             .foregroundStyle(Theme.textFaint)
                         TextField("", text: $cwd)
@@ -195,7 +195,7 @@ struct RestartConfirmSheet: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("COMMAND (수정 가능)")
+                    Text(L("COMMAND (수정 가능)"))
                         .font(Theme.ui(9.5, weight: .bold))
                         .foregroundStyle(Theme.textFaint)
                     TextEditor(text: $command)
@@ -209,14 +209,14 @@ struct RestartConfirmSheet: View {
                         HStack(spacing: 5) {
                             Image(systemName: "wand.and.stars")
                                 .font(.system(size: 9))
-                            Text("ps의 명령어가 실행 불가능한 프로세스 타이틀이라 package.json 스크립트로 대체했습니다")
+                            Text(L("ps의 명령어가 실행 불가능한 프로세스 타이틀이라 package.json 스크립트로 대체했습니다"))
                                 .font(Theme.ui(10))
                         }
                         .foregroundStyle(Theme.purple)
                     }
                 }
                 Toggle(isOn: $captureLog) {
-                    Text("출력을 Porter 로그로 기록 — 재시작 후 라이브 로그 사용 가능 (~/.porter/logs)")
+                    Text(L("출력을 Porter 로그로 기록 — 재시작 후 라이브 로그 사용 가능 (~/.porter/logs)"))
                         .font(Theme.ui(11))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -225,7 +225,7 @@ struct RestartConfirmSheet: View {
 
             HStack {
                 Spacer()
-                Button("취소") { state.restartCandidate = nil }
+                Button(L("취소")) { state.restartCandidate = nil }
                     .buttonStyle(PorterButtonStyle())
                     .keyboardShortcut(.cancelAction)
                 Button {
@@ -235,7 +235,7 @@ struct RestartConfirmSheet: View {
                         state.restartCandidate = nil
                     }
                 } label: {
-                    Label(portChanged ? "Kill & Restart on :\(portText)" : "Kill & Restart",
+                    Label(portChanged ? L("Kill & Restart on :\(portText)") : L("Kill & Restart"),
                           systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(PorterButtonStyle(tint: portChanged ? Theme.green : Theme.accent,
@@ -284,10 +284,10 @@ struct PasswordPromptSheet: View {
                     .font(.system(size: 20))
                     .foregroundStyle(Theme.amber)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("SSH 비밀번호 필요")
+                    Text(L("SSH 비밀번호 필요"))
                         .font(Theme.ui(15, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("\(target.subtitle) — 키 인증이 거부되어 비밀번호로 접속합니다.")
+                    Text(L("\(target.subtitle) — 키 인증이 거부되어 비밀번호로 접속합니다."))
                         .font(Theme.ui(11.5))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -306,7 +306,7 @@ struct PasswordPromptSheet: View {
                 .background(Theme.red.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
             }
 
-            SecureField("비밀번호", text: $password)
+            SecureField(L("비밀번호"), text: $password)
                 .textFieldStyle(.plain)
                 .font(Theme.mono(13))
                 .padding(9)
@@ -315,24 +315,24 @@ struct PasswordPromptSheet: View {
                 .onSubmit(submit)
 
             Toggle(isOn: $saveToKeychain) {
-                Text("macOS Keychain에 저장 (다음 실행에서 자동 사용)")
+                Text(L("macOS Keychain에 저장 (다음 실행에서 자동 사용)"))
                     .font(Theme.ui(11.5))
                     .foregroundStyle(Theme.textSecondary)
             }
             .toggleStyle(.checkbox)
 
             HStack {
-                Text("비밀번호는 ssh에 환경 변수로만 전달되며 디스크에 남지 않습니다.")
+                Text(L("비밀번호는 ssh에 환경 변수로만 전달되며 디스크에 남지 않습니다."))
                     .font(Theme.ui(10))
                     .foregroundStyle(Theme.textFaint)
                 Spacer()
-                Button("취소") { state.cancelPasswordPrompt() }
+                Button(L("취소")) { state.cancelPasswordPrompt() }
                     .buttonStyle(PorterButtonStyle())
                     .keyboardShortcut(.cancelAction)
                 Button {
                     submit()
                 } label: {
-                    Label("연결", systemImage: "bolt.horizontal.fill")
+                    Label(L("연결"), systemImage: "bolt.horizontal.fill")
                 }
                 .buttonStyle(PorterButtonStyle(tint: Theme.accent, prominent: true))
                 .disabled(password.isEmpty)
@@ -371,28 +371,28 @@ struct AddTargetSheet: View {
                     .font(.system(size: 20))
                     .foregroundStyle(Theme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("SSH 타깃 추가")
+                    Text(L("SSH 타깃 추가"))
                         .font(Theme.ui(15, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("기존 SSH 키/agent/config를 그대로 사용합니다. 비밀번호는 저장하지 않습니다.")
+                    Text(L("기존 SSH 키/agent/config를 그대로 사용합니다. 비밀번호는 저장하지 않습니다."))
                         .font(Theme.ui(11))
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
 
             VStack(spacing: 8) {
-                field("라벨 (선택)", text: $name, placeholder: "gpu-server")
-                field("Host *", text: $host, placeholder: "192.168.1.100 또는 ssh config alias")
-                field("User (선택)", text: $user, placeholder: "ubuntu")
-                field("Port (선택)", text: $port, placeholder: "22")
+                field(L("라벨 (선택)"), text: $name, placeholder: "gpu-server")
+                field(L("Host *"), text: $host, placeholder: L("192.168.1.100 또는 ssh config alias"))
+                field(L("User (선택)"), text: $user, placeholder: "ubuntu")
+                field(L("Port (선택)"), text: $port, placeholder: "22")
             }
 
             HStack {
                 Spacer()
-                Button("취소") { state.showAddTarget = false }
+                Button(L("취소")) { state.showAddTarget = false }
                     .buttonStyle(PorterButtonStyle())
                     .keyboardShortcut(.cancelAction)
-                Button("추가") {
+                Button(L("추가")) {
                     state.addTarget(
                         name: name.trimmingCharacters(in: .whitespaces),
                         host: host.trimmingCharacters(in: .whitespaces),

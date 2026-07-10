@@ -14,10 +14,11 @@ enum CommandError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .launchFailed(let msg): return "실행 실패: \(msg)"
+        case .launchFailed(let msg): return L("실행 실패: \(msg)")
         case .failed(let code, let stderr):
             let detail = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
-            return detail.isEmpty ? "명령이 종료 코드 \(code)로 실패했습니다" : detail
+            let codeValue = Int(code)
+            return detail.isEmpty ? L("명령이 종료 코드 \(codeValue)로 실패했습니다") : detail
         }
     }
 }

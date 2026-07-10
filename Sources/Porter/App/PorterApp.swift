@@ -1,3 +1,4 @@
+import Sparkle
 import SwiftUI
 
 /// SwiftUI app entry. Launched from main.swift (no @main — the executable
@@ -5,6 +6,12 @@ import SwiftUI
 struct PorterApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var state = AppState(demo: LaunchMode.isDemo)
+    // Sparkle needs a real .app bundle (SUFeedURL/SUPublicEDKey in Info.plist);
+    // don't start it for bare `swift run` binaries or demo/screenshot runs,
+    // where an update prompt would be noise.
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: !LaunchMode.isDemo && Bundle.main.bundleIdentifier != nil,
+        updaterDelegate: nil, userDriverDelegate: nil)
 
     var body: some Scene {
         WindowGroup {
@@ -15,6 +22,9 @@ struct PorterApp: App {
         .defaultSize(width: 1280, height: 800)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesView(updater: updaterController.updater)
+            }
         }
     }
 }

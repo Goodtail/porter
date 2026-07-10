@@ -32,8 +32,9 @@ final class LogStream {
         }
         process.terminationHandler = { [weak self] proc in
             guard let self, !self.stopped else { return }
+            let code = Int(proc.terminationStatus)
             let message = proc.terminationStatus == 0
-                ? nil : "스트림이 종료되었습니다 (코드 \(proc.terminationStatus))"
+                ? nil : L("스트림이 종료되었습니다 (코드 \(code))")
             Task { @MainActor [weak self] in self?.onEnd?(message) }
         }
         do {

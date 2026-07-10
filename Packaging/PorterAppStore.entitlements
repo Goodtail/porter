@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  Mac App Store entitlements. App Sandbox is mandatory on the MAS.
+
+  ⚠️ Known functional limits under the sandbox (see docs/APP_STORE.md):
+  Porter's local scan (lsof over all processes), kill of arbitrary PIDs,
+  and spawning /usr/bin/ssh with ~/.ssh keys are all blocked by the sandbox.
+  Shipping on the MAS requires cutting or re-architecting those features.
+-->
+<dict>
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- favicon fetch + outbound TCP -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <!-- open panels (e.g. picking a project directory) -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+</dict>
+</plist>

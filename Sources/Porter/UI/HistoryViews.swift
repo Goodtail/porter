@@ -16,7 +16,7 @@ struct HistoryPopover: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("실행 이력")
+                Text(L("실행 이력"))
                     .font(Theme.ui(13, weight: .bold))
                     .foregroundStyle(Theme.textPrimary)
                 Text("\(state.history.count)")
@@ -24,7 +24,7 @@ struct HistoryPopover: View {
                     .foregroundStyle(Theme.textFaint)
                 Spacer()
                 if !state.history.isEmpty {
-                    Button("비우기") { state.clearHistory() }
+                    Button(L("비우기")) { state.clearHistory() }
                         .buttonStyle(.plain)
                         .font(Theme.ui(11))
                         .foregroundStyle(Theme.textFaint)
@@ -40,7 +40,7 @@ struct HistoryPopover: View {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 22))
                         .foregroundStyle(Theme.textFaint)
-                    Text("아직 이력이 없습니다.\nPorter로 kill/재시작한 프로세스가 여기 기록되어\n언제든 같은 명령·디렉토리로 다시 실행할 수 있습니다.")
+                    Text(L("아직 이력이 없습니다.\nPorter로 kill/재시작한 프로세스가 여기 기록되어\n언제든 같은 명령·디렉토리로 다시 실행할 수 있습니다."))
                         .font(Theme.ui(11))
                         .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -101,7 +101,7 @@ private struct HistoryRow: View {
                     state.showHistory = false
                     state.relaunchCandidate = record
                 } label: {
-                    Label("재실행", systemImage: "play.fill")
+                    Label(L("재실행"), systemImage: "play.fill")
                         .font(Theme.ui(10.5, weight: .semibold))
                 }
                 .buttonStyle(PorterButtonStyle(tint: Theme.green))
@@ -114,7 +114,7 @@ private struct HistoryRow: View {
                         .foregroundStyle(Theme.textFaint)
                 }
                 .buttonStyle(.plain)
-                .help("이력에서 삭제")
+                .help(L("이력에서 삭제"))
             }
         }
         .padding(.horizontal, 12)
@@ -170,10 +170,10 @@ struct RelaunchSheet: View {
                     .font(.system(size: 22))
                     .foregroundStyle(Theme.green)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(record.projectName ?? record.command) 다시 실행")
+                    Text(L("\(record.projectName ?? record.command) 다시 실행"))
                         .font(Theme.ui(15, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("타깃: \(record.targetName) — 출력은 ~/.porter/logs에 기록되어 라이브 로그로 볼 수 있습니다.")
+                    Text(L("타깃: \(record.targetName) — 출력은 ~/.porter/logs에 기록되어 라이브 로그로 볼 수 있습니다."))
                         .font(Theme.ui(11.5))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -202,7 +202,7 @@ struct RelaunchSheet: View {
                         }
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("WORKING DIRECTORY")
+                    Text(L("WORKING DIRECTORY"))
                         .font(Theme.ui(9.5, weight: .bold))
                         .foregroundStyle(Theme.textFaint)
                     TextField("", text: $cwd)
@@ -215,7 +215,7 @@ struct RelaunchSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("COMMAND (수정 가능)")
+                Text(L("COMMAND (수정 가능)"))
                     .font(Theme.ui(9.5, weight: .bold))
                     .foregroundStyle(Theme.textFaint)
                 TextEditor(text: $command)
@@ -229,7 +229,7 @@ struct RelaunchSheet: View {
                     HStack(spacing: 5) {
                         Image(systemName: "wand.and.stars")
                             .font(.system(size: 9))
-                        Text("기록된 명령어가 실행 불가능한 프로세스 타이틀이라 package.json 스크립트로 대체했습니다")
+                        Text(L("기록된 명령어가 실행 불가능한 프로세스 타이틀이라 package.json 스크립트로 대체했습니다"))
                             .font(Theme.ui(10))
                     }
                     .foregroundStyle(Theme.purple)
@@ -238,7 +238,7 @@ struct RelaunchSheet: View {
 
             HStack {
                 Spacer()
-                Button("취소") { state.relaunchCandidate = nil }
+                Button(L("취소")) { state.relaunchCandidate = nil }
                     .buttonStyle(PorterButtonStyle())
                     .keyboardShortcut(.cancelAction)
                 Button {
@@ -248,7 +248,7 @@ struct RelaunchSheet: View {
                         state.relaunchCandidate = nil
                     }
                 } label: {
-                    Label("실행", systemImage: "play.fill")
+                    Label(L("실행"), systemImage: "play.fill")
                 }
                 .buttonStyle(PorterButtonStyle(tint: Theme.green, prominent: true))
                 .disabled(state.isActing || !portValid
