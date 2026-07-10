@@ -46,8 +46,21 @@ final class AppState: ObservableObject {
     private var processWatchers: [Int: DispatchSourceProcess] = [:]
     /// Window occlusion — no point polling while nobody can see the result.
     private var windowVisible = true
+    /// Demo mode: curated fake data, no shell access (screenshots, UI tours).
+    let isDemo: Bool
 
-    init() {
+    init(demo: Bool = false) {
+        isDemo = demo
+        if demo {
+            // autoRefresh stays true for honest UI, but no timer is configured
+            // and refresh() is a demo no-op — nothing ever polls.
+            targets = [.local] + DemoData.sshTargets
+            ports = DemoData.ports
+            connectionStates = [Target.local.id: .connected, "demo:gpu": .connected]
+            lastScanDate = Date()
+            events = DemoData.seedEvents(targetName: Target.local.name)
+            return
+        }
         var all: [Target] = [.local]
         all += SSHConfigParser.targetsFromDefaultConfig()
         all += TargetStore.load()
@@ -109,6 +122,11 @@ final class AppState: ObservableObject {
         logPreview = nil
         logPreviewFile = nil
         scanError = nil
+        if isDemo {
+            ports = DemoData.ports
+            connectionStates[target.id] = .connected
+            return
+        }
         authBlocked.remove(target.id)
         clearProcessWatchers()
 
@@ -144,6 +162,7 @@ final class AppState: ObservableObject {
     // MARK: - Scanning
 
     func refresh() async {
+        guard !isDemo else { return }
         let target = selectedTarget
         scanGeneration += 1
         let generation = scanGeneration
@@ -285,6 +304,10 @@ final class AppState: ObservableObject {
         logPreview = nil
         logPreviewFile = nil
         guard let entry else { return }
+        if isDemo {
+            detail = DemoData.detail(for: entry)
+            return
+        }
         Task { await loadDetail(for: entry) }
     }
 
@@ -306,6 +329,10 @@ final class AppState: ObservableObject {
         let target = selectedTarget
         logPreviewFile = file
         logPreview = nil
+        if isDemo {
+            logPreview = DemoData.logTail
+            return
+        }
         Task {
             do {
                 let result = try await Runners.runner(for: target).run(Scanner.tailScript(file: file))
@@ -322,6 +349,11 @@ final class AppState: ObservableObject {
     /// SIGTERM, verify, report. Returns true when the process is gone.
     @discardableResult
     func kill(_ entry: PortEntry, force: Bool) async -> Bool {
+        // Demo PIDs are fictional but could collide with real ones — never signal.
+        guard !isDemo else {
+            log(.info, "(demo) 종료: \(entry.command) (PID \(entry.pid))")
+            return true
+        }
         let target = selectedTarget
         isActing = true
         defer { isActing = false }
@@ -351,6 +383,10 @@ final class AppState: ObservableObject {
 
     /// Kill + relaunch with the recorded command in the recorded cwd.
     func restart(_ entry: PortEntry, command: String, cwd: String) async {
+        guard !isDemo else {
+            log(.info, "(demo) 재시작: \(entry.command) :\(entry.port)")
+            return
+        }
         let target = selectedTarget
         isActing = true
         defer { isActing = false }

@@ -22,6 +22,11 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .frame(minWidth: 980, minHeight: 620)
         .task {
+            if let dir = LaunchMode.screenshotDir {
+                await ScreenshotDirector.run(state: state, directory: dir)
+                return
+            }
+            if state.isDemo { return } // seeded data, nothing to scan
             state.log(.info, "Porter 시작")
             await state.refresh()
         }

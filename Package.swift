@@ -8,6 +8,9 @@ let package = Package(
         .executableTarget(
             name: "Porter",
             path: "Sources/Porter",
+            resources: [
+                .copy("Resources/AppIcon.png")
+            ],
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]
