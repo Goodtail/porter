@@ -23,6 +23,10 @@ struct DetailPanel: View {
                         if detail.isProtected {
                             protectedBanner
                         }
+                        if let project = state.projects[entry.pid] {
+                            projectCard(project)
+                        }
+                        openSection
                         statGrid(detail)
                         CopyableValue(label: "Command", value: detail.fullCommand)
                         if let cwd = detail.cwd {
@@ -94,6 +98,83 @@ struct DetailPanel: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.amber.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
+    }
+
+    // MARK: Project identity + shortcuts
+
+    private func projectCard(_ project: ProjectInfo) -> some View {
+        let color = Theme.color(for: project.category)
+        return HStack(spacing: 10) {
+            Image(systemName: project.category.symbol)
+                .font(.system(size: 15))
+                .foregroundStyle(color)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(project.name ?? entry.command)
+                    .font(Theme.ui(13, weight: .bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                HStack(spacing: 5) {
+                    if let framework = project.framework {
+                        Chip(text: framework, color: color)
+                    }
+                    Text(project.category.label)
+                        .font(Theme.ui(9.5, weight: .semibold))
+                        .foregroundStyle(Theme.textFaint)
+                        .kerning(0.5)
+                }
+            }
+            Spacer()
+        }
+        .padding(11)
+        .background(color.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(color.opacity(0.25), lineWidth: 1))
+    }
+
+    @ViewBuilder
+    private var openSection: some View {
+        let urls = state.urls(for: entry)
+        if !urls.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("OPEN")
+                    .font(Theme.ui(10, weight: .semibold))
+                    .foregroundStyle(Theme.textFaint)
+                ForEach(urls) { portURL in
+                    Button {
+                        state.open(portURL)
+                    } label: {
+                        HStack(spacing: 7) {
+                            Image(systemName: portURL.label == "Tailscale"
+                                  ? "shield.checkered" : "safari")
+                                .font(.system(size: 11))
+                            Text(portURL.url.absoluteString)
+                                .font(Theme.mono(11))
+                                .lineLimit(1)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(Theme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(portURL.label == "Tailscale"
+                          ? "Tailscale 네트워크의 다른 기기에서도 접근 가능"
+                          : "브라우저에서 열기")
+                }
+            }
+        } else if !state.selectedTarget.isLocal && entry.isLoopbackOnly {
+            HStack(spacing: 7) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 10))
+                Text("루프백 전용 바인드 — 원격에서 직접 접근할 수 없습니다")
+                    .font(Theme.ui(11))
+            }
+            .foregroundStyle(Theme.textFaint)
+        }
     }
 
     // MARK: Stats

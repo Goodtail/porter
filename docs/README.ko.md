@@ -34,6 +34,15 @@ SSH로 접속한 GPU 서버에서도 반복하고 있다면 — Porter는 그 �
   프로세스명·PID·사용자·바인드 주소와 함께 표시. 로컬 3초 / 원격 6초 폴링
 - **개발 포트 인텔리전스** — 3000(Next.js), 5173(Vite), 8000(Django/FastAPI),
   8888(Jupyter), 11434(Ollama), 5432(PostgreSQL) 등 잘 알려진 포트에 라벨 표시
+- **프로젝트 식별** — 각 프로세스의 작업 디렉토리에서 `package.json`,
+  `pyproject.toml`, `go.mod`, `Cargo.toml` 등을 읽어 이 서비스가 실제로 무엇인지
+  표시: `Next.js · acme-web`, `NestJS · pind-api`. SSH에서도 전체 프로세스를
+  **배치 스크립트 1회 왕복**으로 처리
+- **카테고리 섹션** — FRONTEND · BACKEND · DATABASE · AI/ML · OTHER로
+  목록 자동 그룹핑 (토글 가능)
+- **브라우저 바로가기** — 클릭 한 번으로 `http://localhost:3000` 열기.
+  머신(로컬/원격)에서 Tailscale이 감지되면 tailnet URL도 함께 제공 —
+  GPU 서버의 dev 서버를 어떤 기기에서든 한 번에 접속
 - **"이 포트 비어있나?"** — 검색창에 포트 번호를 입력하면 점유 프로세스를
   찾아주거나, 비어 있으면 "사용 가능"을 명시
 - **프로세스 인스펙터** — 전체 실행 명령어와 작업 디렉토리(복사 버튼),

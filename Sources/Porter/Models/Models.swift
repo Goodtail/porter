@@ -95,6 +95,42 @@ struct ProcessDetail: Equatable {
     }
 }
 
+// MARK: - Service classification
+
+/// What kind of service a listening process is — drives list sections.
+enum ServiceCategory: Int, CaseIterable, Comparable {
+    case frontend = 0, backend, database, ai, other
+
+    var label: String {
+        switch self {
+        case .frontend: return "FRONTEND · WEB"
+        case .backend: return "BACKEND · API"
+        case .database: return "DATABASE"
+        case .ai: return "AI · ML"
+        case .other: return "OTHER"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .frontend: return "macwindow"
+        case .backend: return "gearshape.2.fill"
+        case .database: return "cylinder.split.1x2.fill"
+        case .ai: return "sparkles"
+        case .other: return "square.grid.2x2"
+        }
+    }
+
+    static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+}
+
+/// What we learned by reading a process's working directory (F-project).
+struct ProjectInfo: Equatable {
+    var name: String?        // package.json "name", pyproject name, or dir basename
+    var framework: String?   // "Next.js", "NestJS", "FastAPI", …
+    var category: ServiceCategory
+}
+
 // MARK: - Activity Feed
 
 struct ActivityEvent: Identifiable {

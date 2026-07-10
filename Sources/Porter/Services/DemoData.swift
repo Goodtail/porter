@@ -33,6 +33,16 @@ enum DemoData {
         PortEntry(port: 11434, address: "127.0.0.1", proto: "TCP", pid: 902, command: "ollama", user: "dev"),
     ]
 
+    static let projects: [Int: ProjectInfo] = [
+        48213: ProjectInfo(name: "acme-web", framework: "Next.js", category: .frontend),
+        48371: ProjectInfo(name: "acme-admin", framework: "Vite", category: .frontend),
+        49118: ProjectInfo(name: "acme-api", framework: "FastAPI", category: .backend),
+        47552: ProjectInfo(name: "research", framework: "Jupyter", category: .ai),
+        902: ProjectInfo(name: nil, framework: nil, category: .ai),
+        981: ProjectInfo(name: nil, framework: nil, category: .database),
+        1027: ProjectInfo(name: nil, framework: nil, category: .database),
+    ]
+
     static func detail(for entry: PortEntry) -> ProcessDetail {
         switch entry.port {
         case 3000:

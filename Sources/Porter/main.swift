@@ -16,24 +16,46 @@ if let scanIndex = arguments.firstIndex(of: "--scan") {
         target = .local
     }
 
+    // Headless password auth: PORTER_SSH_PASSWORD=... porter --scan host
+    if let password = ProcessInfo.processInfo.environment["PORTER_SSH_PASSWORD"],
+       !password.isEmpty {
+        SSHPasswordVault.shared.set(password, for: target.id)
+    }
+
     let semaphore = DispatchSemaphore(value: 0)
     Task {
         do {
-            let result = try await Runners.runner(for: target).run(Scanner.scanScript)
+            let runner = Runners.runner(for: target)
+            let result = try await runner.run(Scanner.scanScript)
             let ports = Scanner.parseScan(result.stdout)
             if ports.isEmpty && !result.succeeded {
                 FileHandle.standardError.write(Data("scan failed: \(result.stderr)".utf8))
                 exit(2)
             }
+
+            // Same project-identity enrichment the GUI shows (one round-trip).
+            var projects: [Int: ProjectInfo] = [:]
+            let pids = ports.map(\.pid).filter { $0 > 0 }
+            if !pids.isEmpty,
+               let enriched = try? await runner.run(ProjectInspector.batchScript(pids: pids)) {
+                let lookup = Dictionary(ports.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
+                projects = ProjectInspector.parse(enriched.stdout, lookup: lookup)
+            }
+
             func pad(_ text: String, _ width: Int) -> String {
                 text.count >= width ? text + " " : text.padding(toLength: width, withPad: " ", startingAt: 0)
             }
-            print(pad("PORT", 8) + pad("PID", 8) + pad("USER", 13) + pad("PROCESS", 21) + "BIND")
+            print(pad("PORT", 8) + pad("PID", 8) + pad("USER", 13) + pad("PROCESS", 21)
+                  + pad("BIND", 12) + pad("CATEGORY", 16) + "PROJECT")
             for entry in ports {
-                let label = entry.devLabel.map { "  (\($0))" } ?? ""
+                let project = projects[entry.pid]
+                let category = project?.category
+                    ?? ProjectInspector.fallbackCategory(command: entry.command, port: entry.port)
+                let identity = [project?.framework, project?.name]
+                    .compactMap { $0 }.joined(separator: " · ")
                 print(pad(String(entry.port), 8) + pad(String(entry.pid), 8)
                       + pad(entry.user, 13) + pad(entry.command, 21)
-                      + entry.address + label)
+                      + pad(entry.address, 12) + pad(category.label, 16) + identity)
             }
             print("\n\(ports.count) listening port(s) on \(target.name)")
             exit(0)

@@ -34,6 +34,15 @@ into a couple of clicks. Remote machines get **exactly the same UX as localhost*
   with process name, PID, user and bind address. Polls every 3s locally / 6s remotely
 - **Dev-port intelligence** — well-known ports get labels: 3000 (Next.js), 5173 (Vite),
   8000 (Django/FastAPI), 8888 (Jupyter), 11434 (Ollama), 5432 (PostgreSQL), …
+- **Project identity** — Porter reads each process's working directory
+  (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) and tells you what
+  the service actually is: `Next.js · acme-web`, `NestJS · pind-api`. Over SSH this
+  costs a single batched round-trip for all processes
+- **Category sections** — the list groups into FRONTEND · BACKEND · DATABASE ·
+  AI/ML · OTHER (toggleable)
+- **Open in browser** — one click opens `http://localhost:3000`. When Tailscale is
+  detected on the machine (local or remote), a tailnet URL is offered too — a dev
+  server on your GPU box is one click away from any device
 - **"Is this port free?"** — type a port number in the search box; Porter either shows
   you the offender or tells you the port is free to use
 - **Process inspector** — full command line, working directory (both copyable),

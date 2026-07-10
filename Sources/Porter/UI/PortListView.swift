@@ -68,6 +68,16 @@ struct PortListView: View {
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: 7))
             .overlay(RoundedRectangle(cornerRadius: 7).stroke(Theme.border, lineWidth: 1))
 
+            Button {
+                withAnimation(.easeOut(duration: 0.12)) { state.groupByCategory.toggle() }
+            } label: {
+                Image(systemName: state.groupByCategory ? "square.grid.2x2" : "list.bullet")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(state.groupByCategory ? Theme.accent : Theme.textSecondary)
+            }
+            .buttonStyle(PorterButtonStyle())
+            .help(state.groupByCategory ? "카테고리 그룹 해제" : "카테고리별로 그룹")
+
             Toggle(isOn: $state.autoRefresh) {
                 Text("Auto")
                     .font(Theme.ui(11, weight: .medium))
@@ -147,6 +157,14 @@ struct PortListView: View {
 
     // MARK: Table
 
+    /// filteredPorts split into ordered category sections (F-sections).
+    private var groupedPorts: [(ServiceCategory, [PortEntry])] {
+        let groups = Dictionary(grouping: state.filteredPorts) { state.category(for: $0) }
+        return ServiceCategory.allCases.compactMap { category in
+            groups[category].map { (category, $0) }
+        }
+    }
+
     private var portTable: some View {
         ScrollView {
             LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
@@ -154,16 +172,47 @@ struct PortListView: View {
                     if state.filteredPorts.isEmpty && !state.isScanning && state.scanError == nil {
                         emptyState
                     }
-                    ForEach(state.filteredPorts) { entry in
-                        PortRow(entry: entry,
-                                isSelected: state.selectedPortID == entry.id)
-                            .environmentObject(state)
+                    if state.groupByCategory {
+                        ForEach(groupedPorts, id: \.0) { category, entries in
+                            sectionHeader(category, count: entries.count)
+                            ForEach(entries) { entry in
+                                PortRow(entry: entry,
+                                        isSelected: state.selectedPortID == entry.id)
+                                    .environmentObject(state)
+                            }
+                        }
+                    } else {
+                        ForEach(state.filteredPorts) { entry in
+                            PortRow(entry: entry,
+                                    isSelected: state.selectedPortID == entry.id)
+                                .environmentObject(state)
+                        }
                     }
                 } header: {
                     columnHeader
                 }
             }
         }
+    }
+
+    private func sectionHeader(_ category: ServiceCategory, count: Int) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: category.symbol)
+                .font(.system(size: 9, weight: .bold))
+            Text(category.label)
+                .font(Theme.ui(10, weight: .bold))
+                .kerning(0.8)
+            Text("\(count)")
+                .font(Theme.mono(9.5))
+                .opacity(0.65)
+            Rectangle()
+                .fill(Theme.color(for: category).opacity(0.16))
+                .frame(height: 1)
+        }
+        .foregroundStyle(Theme.color(for: category))
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 5)
     }
 
     private var columnHeader: some View {
@@ -222,7 +271,7 @@ struct PortRow: View {
                 }
                 .frame(width: 84, alignment: .leading)
 
-                // PROCESS
+                // PROCESS + project identity
                 HStack(spacing: 7) {
                     Image(systemName: ProcessIcon.symbol(for: entry.command))
                         .font(.system(size: 10.5))
@@ -232,7 +281,17 @@ struct PortRow: View {
                         .font(Theme.ui(12.5, weight: .medium))
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
-                    if let label = entry.devLabel {
+                    if let project = state.projects[entry.pid] {
+                        if let framework = project.framework {
+                            Chip(text: framework, color: Theme.color(for: project.category))
+                        }
+                        if let name = project.name {
+                            Text(name)
+                                .font(Theme.mono(11))
+                                .foregroundStyle(Theme.textSecondary)
+                                .lineLimit(1)
+                        }
+                    } else if let label = entry.devLabel {
                         Chip(text: label, color: Theme.purple)
                     }
                 }
@@ -266,8 +325,19 @@ struct PortRow: View {
                 }
                 .frame(width: 110, alignment: .leading)
 
-                // Hover quick action (F4.1)
-                HStack {
+                // Hover quick actions: open in browser + kill
+                HStack(spacing: 10) {
+                    if hovering, let primary = state.urls(for: entry).first {
+                        Button {
+                            state.open(primary)
+                        } label: {
+                            Image(systemName: "safari.fill")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Theme.accent)
+                        }
+                        .buttonStyle(.plain)
+                        .help(primary.url.absoluteString)
+                    }
                     if hovering && entry.pid > 0 {
                         Button {
                             state.killCandidate = entry
@@ -291,6 +361,13 @@ struct PortRow: View {
         .onHover { hovering = $0 }
         .contextMenu {
             Button("상세 보기") { state.selectPort(entry) }
+            let urls = state.urls(for: entry)
+            if !urls.isEmpty {
+                Divider()
+                ForEach(urls) { portURL in
+                    Button("열기: \(portURL.url.absoluteString)") { state.open(portURL) }
+                }
+            }
             Divider()
             Button("Kill (SIGTERM)", role: .destructive) { state.killCandidate = entry }
         }

@@ -19,6 +19,16 @@ enum Theme {
     static let red     = Color(hex: 0xFF5C6C)   // destructive
     static let purple  = Color(hex: 0xA78BFA)   // dev-port chip
 
+    static func color(for category: ServiceCategory) -> Color {
+        switch category {
+        case .frontend: return purple
+        case .backend: return accent
+        case .database: return amber
+        case .ai: return green
+        case .other: return textSecondary
+        }
+    }
+
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }

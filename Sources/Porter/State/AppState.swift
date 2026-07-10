@@ -23,8 +23,17 @@ final class AppState: ObservableObject {
     @Published var logPreview: String?
     @Published var logPreviewFile: String?
 
+    // MARK: Project intelligence
+    /// pid → detected project info, for the currently selected target.
+    @Published var projects: [Int: ProjectInfo] = [:]
+    /// target id → Tailscale IPv4 (only successful probes).
+    @Published var tailscaleIPs: [Target.ID: String] = [:]
+    private var tailscaleProbed: Set<Target.ID> = []
+    private var projectFetchInFlight = false
+
     // MARK: UI state
     @Published var searchText = ""
+    @Published var groupByCategory = true
     @Published var autoRefresh = true { didSet { configureTimer() } }
     @Published var events: [ActivityEvent] = []
     @Published var feedCollapsed = false
@@ -59,6 +68,8 @@ final class AppState: ObservableObject {
             connectionStates = [Target.local.id: .connected, "demo:gpu": .connected]
             lastScanDate = Date()
             events = DemoData.seedEvents(targetName: Target.local.name)
+            projects = DemoData.projects
+            tailscaleIPs = [Target.local.id: "100.84.12.7"]
             return
         }
         var all: [Target] = [.local]
@@ -127,6 +138,7 @@ final class AppState: ObservableObject {
             connectionStates[target.id] = .connected
             return
         }
+        projects = [:]
         authBlocked.remove(target.id)
         clearProcessWatchers()
 
@@ -193,6 +205,12 @@ final class AppState: ObservableObject {
             if target.isLocal {
                 syncProcessWatchers(pids: Set(newPorts.map(\.pid).filter { $0 > 0 }))
             }
+            // Best-effort enrichment, off the critical path.
+            Task { await fetchProjectsIfNeeded() }
+            if !tailscaleProbed.contains(target.id) {
+                tailscaleProbed.insert(target.id)
+                Task { await probeTailscale(target) }
+            }
         } catch {
             guard generation == scanGeneration, target.id == selectedTargetID else { return }
             let message = error.localizedDescription
@@ -233,6 +251,85 @@ final class AppState: ObservableObject {
                 await self.refresh()
             }
         }
+    }
+
+    // MARK: - Project intelligence (what service is this?)
+
+    func category(for entry: PortEntry) -> ServiceCategory {
+        projects[entry.pid]?.category
+            ?? ProjectInspector.fallbackCategory(command: entry.command, port: entry.port)
+    }
+
+    /// Inspect cwd/manifests for pids we haven't classified yet — one batched
+    /// script call, silent on failure (enrichment is never worth an error banner).
+    private func fetchProjectsIfNeeded() async {
+        guard !isDemo, !projectFetchInFlight else { return }
+        let unknown = ports.filter { $0.pid > 0 && projects[$0.pid] == nil }
+        guard !unknown.isEmpty else { return }
+        projectFetchInFlight = true
+        defer { projectFetchInFlight = false }
+
+        let target = selectedTarget
+        do {
+            let result = try await Runners.runner(for: target)
+                .run(ProjectInspector.batchScript(pids: unknown.map(\.pid)))
+            guard target.id == selectedTargetID else { return }
+            let lookup = Dictionary(unknown.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
+            let detected = ProjectInspector.parse(result.stdout, lookup: lookup)
+            projects.merge(detected) { _, new in new }
+        } catch { /* best-effort */ }
+    }
+
+    private func probeTailscale(_ target: Target) async {
+        do {
+            let result = try await Runners.runner(for: target).run(Scanner.tailscaleScript)
+            if let ip = Scanner.parseTailscaleIP(result.stdout) {
+                tailscaleIPs[target.id] = ip
+                log(.info, "Tailscale 감지: \(ip)")
+            }
+        } catch { /* best-effort */ }
+    }
+
+    // MARK: - Open in browser
+
+    struct PortURL: Identifiable {
+        let label: String
+        let url: URL
+        var id: String { url.absoluteString }
+    }
+
+    /// Reachable URLs for a port: localhost (local target), the SSH host
+    /// (remote, non-loopback binds), and the machine's Tailscale IP when
+    /// detected. Databases don't speak HTTP — no URLs for them.
+    func urls(for entry: PortEntry) -> [PortURL] {
+        guard category(for: entry) != .database else { return [] }
+        let target = selectedTarget
+        let tailscale = tailscaleIPs[target.id]
+        var list: [PortURL] = []
+
+        func append(_ label: String, host: String) {
+            guard let url = URL(string: "http://\(host):\(entry.port)") else { return }
+            guard !list.contains(where: { $0.url == url }) else { return }
+            list.append(PortURL(label: label, url: url))
+        }
+
+        if target.isLocal {
+            append("localhost", host: "localhost")
+            if let tailscale { append("Tailscale", host: tailscale) }
+        } else if !entry.isLoopbackOnly {
+            if let tailscale, tailscale == target.host {
+                append("Tailscale", host: tailscale)
+            } else {
+                append(target.host, host: target.host)
+                if let tailscale { append("Tailscale", host: tailscale) }
+            }
+        }
+        return list
+    }
+
+    func open(_ portURL: PortURL) {
+        NSWorkspace.shared.open(portURL.url)
+        log(.info, "브라우저 열기: \(portURL.url.absoluteString)")
     }
 
     // MARK: - SSH password flow

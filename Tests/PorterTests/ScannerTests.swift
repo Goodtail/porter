@@ -172,6 +172,84 @@ final class ScannerTests: XCTestCase {
             "ssh: connect to host 10.0.0.5 port 22: Operation timed out"))
     }
 
+    // MARK: project identity detection
+
+    /// Fixture mirrors real output observed on a remote Mac mini:
+    /// NestJS API, Next.js app, plain-node relay, plus a manifest-less pid.
+    func testProjectInspectorParseAndClassify() {
+        let output = """
+        @@PID:10709
+        @@CWD:/Users/dev/fable/pind-api
+        @@PKG
+        { "name": "pind-api", "scripts": { "dev": "tsx watch src/main.ts" }, "dependencies": { "@nestjs/common": "^11.1.6" }
+        @@PID:11976
+        @@CWD:/Users/dev/fable/pind
+        @@PKG
+        { "name": "pind", "scripts": { "dev": "next dev", "build": "next build" }
+        @@PID:18857
+        @@CWD:/Users/dev/.orca-remote/relay
+        @@PKG
+        {"name":"orca-relay","dependencies":{"node-pty":"^1.1.0"}}
+        @@PID:405
+        @@CWD:/
+        """
+        let lookup: [Int: PortEntry] = [
+            10709: PortEntry(port: 4000, address: "*", proto: "TCP", pid: 10709, command: "node", user: "dev"),
+            11976: PortEntry(port: 3000, address: "*", proto: "TCP", pid: 11976, command: "node", user: "dev"),
+            18857: PortEntry(port: 6768, address: "*", proto: "TCP", pid: 18857, command: "node", user: "dev"),
+            405: PortEntry(port: 5000, address: "*", proto: "TCP", pid: 405, command: "ControlCe", user: "dev"),
+        ]
+        let projects = ProjectInspector.parse(output, lookup: lookup)
+
+        XCTAssertEqual(projects[10709]?.name, "pind-api")
+        XCTAssertEqual(projects[10709]?.framework, "NestJS")
+        XCTAssertEqual(projects[10709]?.category, .backend)
+
+        XCTAssertEqual(projects[11976]?.name, "pind")
+        XCTAssertEqual(projects[11976]?.framework, "Next.js")
+        XCTAssertEqual(projects[11976]?.category, .frontend)
+
+        XCTAssertEqual(projects[18857]?.framework, "Node.js")
+        XCTAssertEqual(projects[18857]?.category, .backend)
+
+        // cwd "/" + no manifest → unnamed, classified by command/port fallback.
+        XCTAssertNil(projects[405]?.name)
+        XCTAssertEqual(projects[405]?.category, .other)
+    }
+
+    func testFallbackCategory() {
+        XCTAssertEqual(ProjectInspector.fallbackCategory(command: "qdrant", port: 6333), .database)
+        XCTAssertEqual(ProjectInspector.fallbackCategory(command: "postgres", port: 5432), .database)
+        XCTAssertEqual(ProjectInspector.fallbackCategory(command: "ollama", port: 11434), .ai)
+        XCTAssertEqual(ProjectInspector.fallbackCategory(command: "uvicorn", port: 8000), .backend)
+        XCTAssertEqual(ProjectInspector.fallbackCategory(command: "rapportd", port: 52942), .other)
+    }
+
+    func testPythonProjectDetection() {
+        let output = """
+        @@PID:77
+        @@CWD:/srv/ml-api
+        @@PY
+        [project]
+        name = "ml-api"
+        dependencies = ["fastapi>=0.110", "uvicorn"]
+        """
+        let lookup = [77: PortEntry(port: 8000, address: "*", proto: "TCP", pid: 77, command: "python3", user: "dev")]
+        let info = ProjectInspector.parse(output, lookup: lookup)[77]
+        XCTAssertEqual(info?.name, "ml-api")
+        XCTAssertEqual(info?.framework, "FastAPI")
+        XCTAssertEqual(info?.category, .backend)
+    }
+
+    // MARK: tailscale
+
+    func testParseTailscaleIP() {
+        XCTAssertEqual(Scanner.parseTailscaleIP("100.67.83.28\n"), "100.67.83.28")
+        XCTAssertEqual(Scanner.parseTailscaleIP("100.101.102.103\nfd7a::1\n"), "100.101.102.103")
+        XCTAssertNil(Scanner.parseTailscaleIP(""))
+        XCTAssertNil(Scanner.parseTailscaleIP("no tailscale here"))
+    }
+
     // MARK: askpass helper + keychain roundtrip
 
     func testAskpassHelperIsCreatedExecutableAndEchoesPassword() throws {

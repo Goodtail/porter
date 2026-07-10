@@ -131,6 +131,30 @@ enum Scanner {
         return Array(best.values)
     }
 
+    // MARK: - Tailscale
+
+    /// Best-effort Tailscale IPv4 of a machine. The CLI often isn't on PATH
+    /// (macOS app-bundle installs), so several locations are probed; the
+    /// final fallback greps interfaces for a CGNAT (100.64/10) address.
+    static let tailscaleScript = """
+    for bin in tailscale /Applications/Tailscale.app/Contents/MacOS/Tailscale /usr/local/bin/tailscale /opt/homebrew/bin/tailscale; do
+      if [ -x "$bin" ] || command -v "$bin" >/dev/null 2>&1; then
+        ip=$("$bin" ip -4 2>/dev/null | head -1)
+        if [ -n "$ip" ]; then echo "$ip"; exit 0; fi
+      fi
+    done
+    (ifconfig 2>/dev/null || ip addr 2>/dev/null) | grep -oE 'inet 100\\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\\.[0-9]+\\.[0-9]+' | head -1 | awk '{print $2}'
+    exit 0
+    """
+
+    static func parseTailscaleIP(_ output: String) -> String? {
+        let ip = output.trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: "\n").first ?? ""
+        let parts = ip.split(separator: ".")
+        guard parts.count == 4, parts.allSatisfy({ Int($0) != nil }) else { return nil }
+        return ip
+    }
+
     // MARK: - Process detail
 
     private static let marker = "@@PORTER@@"
