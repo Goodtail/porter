@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
   <img src="https://img.shields.io/badge/UI-SwiftUI-0A84FF" alt="SwiftUI">
-  <img src="https://img.shields.io/badge/dependencies-zero-A78BFA" alt="의존성 없음">
+  <a href="https://github.com/blick9/porter/releases/latest"><img src="https://img.shields.io/github/v/release/blick9/porter?label=download&color=3FDCA4" alt="최신 릴리스 다운로드"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT 라이선스">
   <img src="https://img.shields.io/badge/PRs-welcome-3FDCA4" alt="PR 환영">
 </p>
@@ -78,10 +78,18 @@ SSH로 접속한 GPU 서버에서도 반복하고 있다면 — Porter는 그 �
 
 ## 설치
 
+### 다운로드 (권장)
+
+**[Releases](https://github.com/blick9/porter/releases/latest)**에서 최신 DMG(서명·공증 완료)를 받아 Porter를 Applications에 끌어다 놓으면 끝입니다. 실행 시 릴리스 피드를 확인해(Sparkle) 새 버전이 나오면 클릭 한 번으로 자동 업데이트됩니다.
+
+Homebrew cask는 첫 릴리스 직후 지원 예정입니다.
+
+### 소스 빌드
+
 macOS 14+ 및 Xcode Command Line Tools(Swift 6) 필요.
 
 ```bash
-git clone <this-repo> && cd process-manager
+git clone https://github.com/blick9/porter.git && cd porter
 
 # 바로 실행
 swift run

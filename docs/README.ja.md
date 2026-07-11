@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
   <img src="https://img.shields.io/badge/UI-SwiftUI-0A84FF" alt="SwiftUI">
-  <img src="https://img.shields.io/badge/dependencies-zero-A78BFA" alt="依存関係ゼロ">
+  <a href="https://github.com/blick9/porter/releases/latest"><img src="https://img.shields.io/github/v/release/blick9/porter?label=download&color=3FDCA4" alt="最新リリースをダウンロード"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT ライセンス">
   <img src="https://img.shields.io/badge/PRs-welcome-3FDCA4" alt="PR 歓迎">
 </p>
@@ -81,10 +81,18 @@
 
 ## インストール
 
+### ダウンロード（推奨）
+
+**[Releases](https://github.com/blick9/porter/releases/latest)** から最新の DMG（署名・公証済み）をダウンロードし、Porter を Applications にドラッグするだけです。起動時にリリースフィードを確認し（Sparkle）、新バージョンはワンクリックで自動アップデートできます。
+
+Homebrew cask は初回リリース後に対応予定です。
+
+### ソースからビルド
+
 macOS 14+ と Xcode Command Line Tools (Swift 6) が必要です。
 
 ```bash
-git clone <this-repo> && cd process-manager
+git clone https://github.com/blick9/porter.git && cd porter
 
 # そのまま実行
 swift run

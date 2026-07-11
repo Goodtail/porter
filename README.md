@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
   <img src="https://img.shields.io/badge/UI-SwiftUI-0A84FF" alt="SwiftUI">
-  <img src="https://img.shields.io/badge/dependencies-zero-A78BFA" alt="Zero dependencies">
+  <a href="https://github.com/blick9/porter/releases/latest"><img src="https://img.shields.io/github/v/release/blick9/porter?label=download&color=3FDCA4" alt="Download latest release"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License">
   <img src="https://img.shields.io/badge/PRs-welcome-3FDCA4" alt="PRs welcome">
 </p>
@@ -81,10 +81,18 @@ into a couple of clicks. Remote machines get **exactly the same UX as localhost*
 
 ## Install
 
+### Download (recommended)
+
+Grab the latest signed & notarized DMG from **[Releases](https://github.com/blick9/porter/releases/latest)** and drag Porter into Applications. Porter keeps itself up to date — it checks the release feed on launch (Sparkle) and offers one-click updates.
+
+Homebrew cask support is planned right after the first release.
+
+### Build from source
+
 Requires macOS 14+ and Xcode Command Line Tools (Swift 6).
 
 ```bash
-git clone <this-repo> && cd process-manager
+git clone https://github.com/blick9/porter.git && cd porter
 
 # run directly
 swift run
