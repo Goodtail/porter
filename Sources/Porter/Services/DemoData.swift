@@ -46,16 +46,18 @@ enum DemoData {
     ]
 
     /// Letter-tile stand-ins for real favicons (demo can't fetch over HTTP).
+    /// Keys mirror FaviconFetcher.key — host:port#pid of the demo entries.
     static var favicons: [String: NSImage] {
-        let specs: [(String, String, NSColor)] = [
-            ("localhost:3000", "N", NSColor.black),
-            ("localhost:5173", "V", NSColor(red: 0.39, green: 0.29, blue: 0.93, alpha: 1)),
-            ("localhost:8000", "F", NSColor(red: 0.02, green: 0.59, blue: 0.53, alpha: 1)),
-            ("localhost:8888", "J", NSColor(red: 0.95, green: 0.45, blue: 0.11, alpha: 1)),
+        let specs: [(Int, String, NSColor)] = [
+            (3000, "N", NSColor.black),
+            (5173, "V", NSColor(red: 0.39, green: 0.29, blue: 0.93, alpha: 1)),
+            (8000, "F", NSColor(red: 0.02, green: 0.59, blue: 0.53, alpha: 1)),
+            (8888, "J", NSColor(red: 0.95, green: 0.45, blue: 0.11, alpha: 1)),
         ]
         var result: [String: NSImage] = [:]
-        for (key, letter, color) in specs {
-            result[key] = letterTile(letter, background: color)
+        for (port, letter, color) in specs {
+            guard let pid = ports.first(where: { $0.port == port })?.pid else { continue }
+            result["localhost:\(port)#\(pid)"] = letterTile(letter, background: color)
         }
         return result
     }

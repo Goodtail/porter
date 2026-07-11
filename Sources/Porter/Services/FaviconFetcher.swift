@@ -13,9 +13,11 @@ enum FaviconFetcher {
         return URLSession(configuration: config)
     }()
 
-    /// Cache key for a service URL ("localhost:3000", "100.67.83.28:8081").
-    static func key(_ url: URL) -> String {
-        "\(url.host ?? "?"):\(url.port ?? 80)"
+    /// Cache key for a service ("localhost:3000#48213"). The PID is part of
+    /// the key so a new process reusing a port fetches its own icon instead
+    /// of inheriting the previous service's.
+    static func key(_ url: URL, pid: Int) -> String {
+        "\(url.host ?? "?"):\(url.port ?? 80)#\(pid)"
     }
 
     static func fetch(base: URL) async -> NSImage? {

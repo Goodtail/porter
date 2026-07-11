@@ -362,7 +362,7 @@ final class AppState: ObservableObject {
         guard !isDemo else { return }
         for entry in ports {
             guard let primary = urls(for: entry).first else { continue }
-            let key = FaviconFetcher.key(primary.url)
+            let key = FaviconFetcher.key(primary.url, pid: entry.pid)
             guard !faviconAttempted.contains(key) else { continue }
             faviconAttempted.insert(key)
             Task { [weak self] in

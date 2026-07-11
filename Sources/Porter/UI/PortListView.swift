@@ -179,7 +179,21 @@ struct PortListView: View {
         }
     }
 
+    /// Fixed columns + PROCESS at its minimum + padding need ~712pt. Below
+    /// that the table scrolls horizontally instead of clipping cells; with
+    /// more room the content tracks the panel width exactly as before.
+    private static let minTableWidth: CGFloat = 750
+
     private var portTable: some View {
+        GeometryReader { geo in
+            ScrollView(.horizontal) {
+                verticalTable
+                    .frame(width: max(geo.size.width, Self.minTableWidth))
+            }
+        }
+    }
+
+    private var verticalTable: some View {
         ScrollView {
             LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                 Section {
@@ -401,7 +415,7 @@ struct PortRow: View {
                 state.open(primary)
             } label: {
                 HStack(spacing: 5) {
-                    if let icon = state.favicons[FaviconFetcher.key(primary.url)] {
+                    if let icon = state.favicons[FaviconFetcher.key(primary.url, pid: entry.pid)] {
                         Image(nsImage: icon)
                             .resizable()
                             .interpolation(.high)
