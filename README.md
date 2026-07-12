@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
   <img src="https://img.shields.io/badge/UI-SwiftUI-0A84FF" alt="SwiftUI">
-  <a href="https://github.com/blick9/porter/releases/latest"><img src="https://img.shields.io/github/v/release/blick9/porter?label=download&color=3FDCA4" alt="Download latest release"></a>
+  <a href="https://github.com/Goodtail/porter/releases/latest"><img src="https://img.shields.io/github/v/release/Goodtail/porter?label=download&color=3FDCA4" alt="Download latest release"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License">
   <img src="https://img.shields.io/badge/PRs-welcome-3FDCA4" alt="PRs welcome">
 </p>
@@ -95,18 +95,18 @@ in one click. Close the main window and Porter keeps watch in the background.
 ### Homebrew
 
 ```bash
-brew install --cask blick9/tap/porter
+brew install --cask goodtail/tap/porter
 ```
 
 ### Install script
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/blick9/porter/main/Scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Goodtail/porter/main/Scripts/install.sh | sh
 ```
 
 ### Manual download
 
-Grab the DMG from **[Releases](https://github.com/blick9/porter/releases/latest)**
+Grab the DMG from **[Releases](https://github.com/Goodtail/porter/releases/latest)**
 and drag Porter into Applications. Porter checks the release feed on launch
 (Sparkle) and offers one-click updates.
 
@@ -119,7 +119,7 @@ and drag Porter into Applications. Porter checks the release feed on launch
 Requires macOS 14+ and Xcode Command Line Tools (Swift 6).
 
 ```bash
-git clone https://github.com/blick9/porter.git && cd porter
+git clone https://github.com/Goodtail/porter.git && cd porter
 
 # run directly
 swift run

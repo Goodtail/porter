@@ -18,13 +18,13 @@
 #   SPARKLE_ED_PUBLIC_KEY="..." VERSION=1.0.0 BUILD_NUMBER=2 \
 #   Scripts/release-github.sh
 #
-# Optional env: REPO (default blick9/porter), NOTARY_PROFILE, BUNDLE_ID
+# Optional env: REPO (default Goodtail/porter), NOTARY_PROFILE, BUNDLE_ID
 set -eu
 cd "$(dirname "$0")/.."
 
 : "${VERSION:?set VERSION, e.g. 1.0.0}"
 : "${SPARKLE_ED_PUBLIC_KEY:?run generate_keys once and export the public key — updates cannot be verified without it}"
-REPO="${REPO:-blick9/porter}"
+REPO="${REPO:-Goodtail/porter}"
 export VERSION SPARKLE_ED_PUBLIC_KEY
 
 command -v gh >/dev/null 2>&1 || { echo "gh CLI required (brew install gh)"; exit 1; }

@@ -1,15 +1,15 @@
 # Homebrew cask for Porter — canonical copy.
-# 배포 위치: blick9/homebrew-tap 저장소의 Casks/porter.rb 로 복사해 push하면
-# `brew install --cask blick9/tap/porter` 로 설치 가능.
+# 배포 위치: Goodtail/homebrew-tap 저장소의 Casks/porter.rb 로 복사해 push하면
+# `brew install --cask goodtail/tap/porter` 로 설치 가능.
 # 새 릴리스마다 version과 sha256(shasum -a 256 dist/Porter-<VERSION>.dmg)을 갱신.
 cask "porter" do
   version "0.1.0"
-  sha256 "2a33b6ec15af92bcee300896dd0e1c14b03ab4b09f6e36656aba5524b2c36471"
+  sha256 "f17c956913d8ec696885c3e514e9d4be1b2dd22eccb03c11d257df8473295ce6"
 
-  url "https://github.com/blick9/porter/releases/download/v#{version}/Porter-#{version}.dmg"
+  url "https://github.com/Goodtail/porter/releases/download/v#{version}/Porter-#{version}.dmg"
   name "Porter"
   desc "Process and port manager for dev servers, local and over SSH"
-  homepage "https://github.com/blick9/porter"
+  homepage "https://github.com/Goodtail/porter"
 
   livecheck do
     url :url
@@ -31,6 +31,6 @@ cask "porter" do
 
   zap trash: [
     "~/.porter",
-    "~/Library/Preferences/dev.porter.Porter.plist",
+    "~/Library/Preferences/com.goodtail.porter.plist",
   ]
 end

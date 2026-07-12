@@ -34,7 +34,7 @@ Porter를 서명·공증·심사 제출 가능한 형태로 패키징하는 방�
 ## 사전 준비 (공통)
 
 1. **Apple Developer Program** 가입 (연 $99) — https://developer.apple.com
-2. **번들 ID 결정** — 기본값 `dev.porter.Porter`는 예시입니다. 본인 소유
+2. **번들 ID** — 기본값은 `com.goodtail.porter`로 확정되어 있습니다. 다른 ID가 필요하면
    도메인 기반(예: `com.yourdomain.porter`)으로 정해 모든 스크립트에
    `BUNDLE_ID=…`로 넘기세요. 한 번 배포하면 바꿀 수 없습니다.
 3. **버전 정책** — `VERSION`(마케팅 버전, 예: 1.0.0)과

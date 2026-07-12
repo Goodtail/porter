@@ -2,10 +2,10 @@
 # Porter installer — fetches the latest GitHub release DMG and installs
 # /Applications/Porter.app.
 #
-#   curl -fsSL https://raw.githubusercontent.com/blick9/porter/main/Scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/Goodtail/porter/main/Scripts/install.sh | sh
 set -eu
 
-REPO="blick9/porter"
+REPO="Goodtail/porter"
 DMG_URL=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" |
   grep -o '"browser_download_url": *"[^"]*\.dmg"' | head -1 | cut -d'"' -f4)
 [ -n "$DMG_URL" ] || { echo "error: no DMG asset in the latest release" >&2; exit 1; }

@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
   <img src="https://img.shields.io/badge/UI-SwiftUI-0A84FF" alt="SwiftUI">
-  <a href="https://github.com/blick9/porter/releases/latest"><img src="https://img.shields.io/github/v/release/blick9/porter?label=download&color=3FDCA4" alt="최신 릴리스 다운로드"></a>
+  <a href="https://github.com/Goodtail/porter/releases/latest"><img src="https://img.shields.io/github/v/release/Goodtail/porter?label=download&color=3FDCA4" alt="최신 릴리스 다운로드"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT 라이선스">
   <img src="https://img.shields.io/badge/PRs-welcome-3FDCA4" alt="PR 환영">
 </p>
@@ -91,18 +91,18 @@ LISTEN 중인 포트가 한눈에 — 폭주하는 dev 서버는 클릭 한 번�
 ### Homebrew
 
 ```bash
-brew install --cask blick9/tap/porter
+brew install --cask goodtail/tap/porter
 ```
 
 ### 설치 스크립트
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/blick9/porter/main/Scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Goodtail/porter/main/Scripts/install.sh | sh
 ```
 
 ### 직접 다운로드
 
-**[Releases](https://github.com/blick9/porter/releases/latest)**에서 DMG를 받아
+**[Releases](https://github.com/Goodtail/porter/releases/latest)**에서 DMG를 받아
 Porter를 Applications에 끌어다 놓으세요. 실행 시 릴리스 피드를 확인해(Sparkle)
 새 버전이 나오면 클릭 한 번으로 업데이트됩니다.
 
@@ -115,7 +115,7 @@ Porter를 Applications에 끌어다 놓으세요. 실행 시 릴리스 피드를
 macOS 14+ 및 Xcode Command Line Tools(Swift 6) 필요.
 
 ```bash
-git clone https://github.com/blick9/porter.git && cd porter
+git clone https://github.com/Goodtail/porter.git && cd porter
 
 # 바로 실행
 swift run
