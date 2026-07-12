@@ -4,7 +4,7 @@
 # 새 릴리스마다 version과 sha256(shasum -a 256 dist/Porter-<VERSION>.dmg)을 갱신.
 cask "porter" do
   version "0.1.0"
-  sha256 "f17c956913d8ec696885c3e514e9d4be1b2dd22eccb03c11d257df8473295ce6"
+  sha256 "258cea35f9aa407ed7db98b5b18ed5db88b16afab3d0d42a32003743d3408994"
 
   url "https://github.com/Goodtail/porter/releases/download/v#{version}/Porter-#{version}.dmg"
   name "Porter"
@@ -24,7 +24,7 @@ cask "porter" do
 
   zap trash: [
     "~/.porter",
-    "~/Library/Preferences/com.goodtail.porter.plist",
+    "~/Library/Preferences/com.goodtail.mac.porter.plist",
   ]
 
   caveats <<~EOS

@@ -5,7 +5,7 @@
 # Env overrides:
 #   VERSION               marketing version (CFBundleShortVersionString), default 0.1.0
 #   BUILD_NUMBER          CFBundleVersion — must increase per release, default 1
-#   BUNDLE_ID             CFBundleIdentifier, default com.goodtail.porter
+#   BUNDLE_ID             CFBundleIdentifier, default com.goodtail.mac.porter
 #   SIGN_IDENTITY         codesign identity, default "-" (ad-hoc)
 #   COPYRIGHT             NSHumanReadableCopyright
 #   FEED_URL              Sparkle appcast URL (SUFeedURL)
@@ -16,7 +16,7 @@ cd "$(dirname "$0")/.."
 
 VERSION="${VERSION:-0.1.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
-BUNDLE_ID="${BUNDLE_ID:-com.goodtail.porter}"
+BUNDLE_ID="${BUNDLE_ID:-com.goodtail.mac.porter}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 COPYRIGHT="${COPYRIGHT:-© 2026 Porter. MIT License.}"
 FEED_URL="${FEED_URL:-https://raw.githubusercontent.com/Goodtail/porter/main/appcast.xml}"
