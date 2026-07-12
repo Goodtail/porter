@@ -49,6 +49,19 @@ enum ScreenshotDirector {
             capture(sheet, to: directory + "/screenshot-restart.png")
         }
 
+        // Fourth shot: the menu-bar quick panel, rendered in an off-screen
+        // window (clicking the real status item can't be scripted).
+        let hosting = NSHostingView(rootView: MenuBarPanel().environmentObject(state))
+        hosting.frame = NSRect(origin: .zero, size: hosting.fittingSize)
+        let panelWindow = NSWindow(contentRect: hosting.frame, styleMask: .borderless,
+                                   backing: .buffered, defer: false)
+        panelWindow.contentView = hosting
+        panelWindow.setFrameOrigin(NSPoint(x: -20_000, y: -20_000))
+        panelWindow.orderBack(nil)
+        try? await Task.sleep(nanoseconds: 600_000_000)
+        capture(panelWindow, to: directory + "/screenshot-menubar.png")
+        panelWindow.orderOut(nil)
+
         // NSApp.terminate can stall while a sheet's modal session is active;
         // everything is on disk, so exit outright.
         exit(0)

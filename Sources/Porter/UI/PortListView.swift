@@ -25,23 +25,45 @@ struct PortListView: View {
     // MARK: Header
 
     private var headerBar: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 7) {
-                    Text(state.selectedTarget.name)
-                        .font(Theme.ui(15, weight: .bold))
-                        .foregroundStyle(Theme.textPrimary)
-                    if state.isScanning {
-                        ProgressView().controlSize(.small)
-                    }
-                }
-                Text(L("LISTEN \(state.ports.count)개 포트\(lastScanSuffix)"))
-                    .font(Theme.ui(10.5))
-                    .foregroundStyle(Theme.textFaint)
+        // The title/status block never compresses (fixedSize below); when the
+        // panel gets too narrow for one row, controls drop to a second row
+        // instead of squeezing the labels into vertical word-wrap.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                titleBlock
+                Spacer(minLength: 12)
+                headerControls
             }
+            VStack(alignment: .leading, spacing: 10) {
+                titleBlock
+                headerControls
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
 
-            Spacer()
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 7) {
+                Text(state.selectedTarget.name)
+                    .font(Theme.ui(15, weight: .bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                if state.isScanning {
+                    ProgressView().controlSize(.small)
+                }
+            }
+            Text(L("LISTEN \(state.ports.count)개 포트\(lastScanSuffix)"))
+                .font(Theme.ui(10.5))
+                .foregroundStyle(Theme.textFaint)
+                .lineLimit(1)
+        }
+        .fixedSize()
+    }
 
+    private var headerControls: some View {
+        HStack(spacing: 12) {
             // Search / port-check field (F2.5)
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
@@ -51,7 +73,7 @@ struct PortListView: View {
                     .textFieldStyle(.plain)
                     .font(Theme.mono(12))
                     .foregroundStyle(Theme.textPrimary)
-                    .frame(width: 190)
+                    .frame(minWidth: 110, maxWidth: 190)
                 if !state.searchText.isEmpty {
                     Button {
                         state.searchText = ""
@@ -110,8 +132,6 @@ struct PortListView: View {
             .keyboardShortcut("r", modifiers: .command)
             .help(L("새로고침 (⌘R)"))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
     }
 
     private var lastScanSuffix: String {

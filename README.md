@@ -82,13 +82,37 @@ into a couple of clicks. Remote machines get **exactly the same UX as localhost*
 - **Activity feed** — a chronological record of every scan, kill and restart.
   Always answers "wait, what did I just kill?"
 
+## Right in your menu bar
+
+<img src="docs/screenshot-menubar.png" width="380" alt="Porter menu bar quick panel">
+
+The full picture without switching windows: click the Porter icon in the menu
+bar to see every listening port on any target — and kill a runaway dev server
+in one click. Close the main window and Porter keeps watch in the background.
+
 ## Install
 
-### Download (recommended)
+### Homebrew
 
-Grab the latest signed & notarized DMG from **[Releases](https://github.com/blick9/porter/releases/latest)** and drag Porter into Applications. Porter keeps itself up to date — it checks the release feed on launch (Sparkle) and offers one-click updates.
+```bash
+brew install --cask blick9/tap/porter
+```
 
-Homebrew cask support is planned right after the first release.
+### Install script
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blick9/porter/main/Scripts/install.sh | sh
+```
+
+### Manual download
+
+Grab the DMG from **[Releases](https://github.com/blick9/porter/releases/latest)**
+and drag Porter into Applications. Porter checks the release feed on launch
+(Sparkle) and offers one-click updates.
+
+> Pre-1.0 builds are not notarized yet, so macOS warns on first launch. The
+> install script clears the quarantine flag for you; with Homebrew add
+> `--no-quarantine`, or allow Porter under System Settings → Privacy & Security.
 
 ### Build from source
 

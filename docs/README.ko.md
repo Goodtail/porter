@@ -78,13 +78,37 @@ SSH로 접속한 GPU 서버에서도 반복하고 있다면 — Porter는 그 �
 - **Activity Feed** — 모든 스캔/킬/재시작을 시간순 기록.
   "아까 내가 뭘 죽였지?"에 항상 답할 수 있음
 
+## 메뉴 막대에서 바로
+
+<img src="screenshot-menubar.png" width="380" alt="Porter 메뉴 막대 퀵 패널">
+
+창을 전환할 필요 없이, 메뉴 막대의 Porter 아이콘을 클릭하면 어떤 타깃이든
+LISTEN 중인 포트가 한눈에 — 폭주하는 dev 서버는 클릭 한 번으로 kill.
+메인 창을 닫아도 Porter는 백그라운드에서 계속 지켜봅니다.
+
 ## 설치
 
-### 다운로드 (권장)
+### Homebrew
 
-**[Releases](https://github.com/blick9/porter/releases/latest)**에서 최신 DMG(서명·공증 완료)를 받아 Porter를 Applications에 끌어다 놓으면 끝입니다. 실행 시 릴리스 피드를 확인해(Sparkle) 새 버전이 나오면 클릭 한 번으로 자동 업데이트됩니다.
+```bash
+brew install --cask blick9/tap/porter
+```
 
-Homebrew cask는 첫 릴리스 직후 지원 예정입니다.
+### 설치 스크립트
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blick9/porter/main/Scripts/install.sh | sh
+```
+
+### 직접 다운로드
+
+**[Releases](https://github.com/blick9/porter/releases/latest)**에서 DMG를 받아
+Porter를 Applications에 끌어다 놓으세요. 실행 시 릴리스 피드를 확인해(Sparkle)
+새 버전이 나오면 클릭 한 번으로 업데이트됩니다.
+
+> 1.0 이전 빌드는 아직 공증 전이라 첫 실행 시 macOS 경고가 뜹니다. 설치
+> 스크립트는 격리 플래그를 자동으로 해제하며, Homebrew는 `--no-quarantine`
+> 옵션을 쓰거나 시스템 설정 → 개인정보 보호 및 보안에서 허용하면 됩니다.
 
 ### 소스 빌드
 

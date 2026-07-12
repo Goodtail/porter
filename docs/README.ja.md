@@ -82,13 +82,40 @@
 - **アクティビティフィード** — すべてのスキャン/kill/再起動を時系列で記録。
   「さっき何を kill したっけ?」に常に答えられます
 
+## メニューバーからすぐに
+
+<img src="screenshot-menubar.png" width="380" alt="Porter メニューバークイックパネル">
+
+ウィンドウを切り替えずに、メニューバーの Porter アイコンをクリックするだけで
+どのターゲットでも LISTEN 中のポートが一目瞭然 — 暴走した dev サーバーは
+ワンクリックで kill。メインウィンドウを閉じても Porter はバックグラウンドで
+監視し続けます。
+
 ## インストール
 
-### ダウンロード（推奨）
+### Homebrew
 
-**[Releases](https://github.com/blick9/porter/releases/latest)** から最新の DMG（署名・公証済み）をダウンロードし、Porter を Applications にドラッグするだけです。起動時にリリースフィードを確認し（Sparkle）、新バージョンはワンクリックで自動アップデートできます。
+```bash
+brew install --cask blick9/tap/porter
+```
 
-Homebrew cask は初回リリース後に対応予定です。
+### インストールスクリプト
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blick9/porter/main/Scripts/install.sh | sh
+```
+
+### 手動ダウンロード
+
+**[Releases](https://github.com/blick9/porter/releases/latest)** から DMG を
+ダウンロードし、Porter を Applications にドラッグしてください。起動時に
+リリースフィードを確認し（Sparkle）、新バージョンはワンクリックで
+アップデートできます。
+
+> 1.0 より前のビルドはまだ公証されていないため、初回起動時に macOS の警告が
+> 出ます。インストールスクリプトは隔離フラグを自動で解除します。Homebrew は
+> `--no-quarantine` オプションを付けるか、システム設定 → プライバシーと
+> セキュリティで許可してください。
 
 ### ソースからビルド
 

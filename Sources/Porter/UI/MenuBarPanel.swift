@@ -92,7 +92,10 @@ struct MenuBarPanel: View {
                 }
                 .padding(.vertical, 4)
             }
-            .frame(maxHeight: 380)
+            // Explicit height: the menu-bar panel proposes a minimal size to
+            // ScrollView, which otherwise collapses to a peephole. Track the
+            // row count so short lists stay compact and long ones get tall.
+            .frame(height: min(max(CGFloat(state.ports.count) * 26 + 8, 130), 430))
         }
     }
 
