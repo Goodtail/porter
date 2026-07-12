@@ -1,19 +1,10 @@
-# Homebrew cask draft for Porter — 첫 릴리스 후에 제출용.
-#
-# 채워야 할 것:
-#   1. sha256:  shasum -a 256 dist/Porter-<VERSION>.dmg
-#   2. zap의 Preferences plist 경로를 최종 번들 ID로 교체
-#
-# 배포 방법 (둘 중 하나):
-#   A. 개인 tap (즉시 가능):
-#      blick9/homebrew-tap 저장소를 만들고 이 파일을 Casks/porter.rb로 push
-#      → 사용자는 `brew install --cask blick9/tap/porter`
-#   B. homebrew-cask 본진 제출 (인지도 기준 충족 시):
-#      https://github.com/Homebrew/homebrew-cask 에 PR
-#      → 사용자는 `brew install --cask porter`
+# Homebrew cask for Porter — canonical copy.
+# 배포 위치: blick9/homebrew-tap 저장소의 Casks/porter.rb 로 복사해 push하면
+# `brew install --cask blick9/tap/porter` 로 설치 가능.
+# 새 릴리스마다 version과 sha256(shasum -a 256 dist/Porter-<VERSION>.dmg)을 갱신.
 cask "porter" do
-  version "1.0.0"
-  sha256 "REPLACE_WITH_SHA256_OF_RELEASE_DMG"
+  version "0.1.0"
+  sha256 "2a33b6ec15af92bcee300896dd0e1c14b03ab4b09f6e36656aba5524b2c36471"
 
   url "https://github.com/blick9/porter/releases/download/v#{version}/Porter-#{version}.dmg"
   name "Porter"
@@ -31,8 +22,15 @@ cask "porter" do
 
   app "Porter.app"
 
+  caveats <<~EOS
+    Pre-1.0 builds of Porter are not notarized yet. If macOS blocks the first
+    launch, reinstall with:
+      brew reinstall --cask --no-quarantine porter
+    or allow Porter under System Settings → Privacy & Security.
+  EOS
+
   zap trash: [
     "~/.porter",
-    "~/Library/Preferences/REPLACE.WITH.FINAL.BUNDLE.ID.plist",
+    "~/Library/Preferences/dev.porter.Porter.plist",
   ]
 end
