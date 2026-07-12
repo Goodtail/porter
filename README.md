@@ -32,6 +32,9 @@ into a couple of clicks. Remote machines get **exactly the same UX as localhost*
 
 - **Port scanner** — every listening TCP port on the selected target (local or SSH),
   with process name, PID, user and bind address. Polls every 3s locally / 6s remotely
+- **Menu bar quick panel** — Porter lives in the menu bar: glance at listening ports
+  and kill them in one click, even with the main window closed. Launch at login and
+  menu bar behavior are configurable in Settings (⌘,)
 - **Dev-port intelligence** — well-known ports get labels: 3000 (Next.js), 5173 (Vite),
   8000 (Django/FastAPI), 8888 (Jupyter), 11434 (Ollama), 5432 (PostgreSQL), …
 - **Project identity** — Porter reads each process's working directory

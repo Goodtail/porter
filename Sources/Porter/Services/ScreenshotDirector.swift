@@ -9,12 +9,19 @@ enum ScreenshotDirector {
     static func run(state: AppState, directory: String) async {
         try? FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
 
-        // Let SwiftUI finish its first layout pass.
+        // Let SwiftUI finish its first layout pass. MenuBarExtra's status-bar
+        // window is always visible, so require a main-capable window — and
+        // retry briefly: first layout can be slow on unfocused launches.
         try? await Task.sleep(nanoseconds: 1_200_000_000)
-        guard let window = NSApp.windows.first(where: { $0.isVisible }) else {
-            fputs("screenshot: no visible window\n", stderr)
-            NSApp.terminate(nil)
-            return
+        var mainWindow: NSWindow?
+        for _ in 0..<20 {
+            mainWindow = NSApp.windows.first { $0.isVisible && $0.canBecomeMain }
+            if mainWindow != nil { break }
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+        guard let window = mainWindow else {
+            fputs("screenshot: no visible main window\n", stderr)
+            exit(1) // NSApp.terminate can stall with no windows — exit outright
         }
         window.setContentSize(NSSize(width: 1280, height: 800))
         window.center()
