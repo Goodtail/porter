@@ -18,9 +18,14 @@ cask "porter" do
 
   # Sparkle keeps the app current between cask releases.
   auto_updates true
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "Porter.app"
+
+  zap trash: [
+    "~/.porter",
+    "~/Library/Preferences/com.goodtail.porter.plist",
+  ]
 
   caveats <<~EOS
     Pre-1.0 builds of Porter are not notarized yet. If macOS blocks the first
@@ -28,9 +33,4 @@ cask "porter" do
       brew reinstall --cask --no-quarantine porter
     or allow Porter under System Settings → Privacy & Security.
   EOS
-
-  zap trash: [
-    "~/.porter",
-    "~/Library/Preferences/com.goodtail.porter.plist",
-  ]
 end
