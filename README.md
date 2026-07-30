@@ -4,8 +4,6 @@
 
 <h1 align="center">Porter</h1>
 
-<p align="center"><b>Goodtail Open Source · 00</b></p>
-
 <p align="center">
   A native macOS process &amp; port manager for developers —<br>
   monitor and safely control dev servers on your Mac <b>and over SSH</b>, in one window.
@@ -205,5 +203,3 @@ See [PRD.md](PRD.md) (Korean) for the full product spec.
 ## License
 
 [MIT](LICENSE)
-
-Porter is the first public open-source project from [Goodtail](https://github.com/Goodtail).

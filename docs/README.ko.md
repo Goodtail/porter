@@ -4,8 +4,6 @@
 
 <h1 align="center">Porter</h1>
 
-<p align="center"><b>Goodtail Open Source · 00</b></p>
-
 <p align="center">
   개발자를 위한 macOS 네이티브 프로세스·포트 매니저 —<br>
   로컬 Mac과 <b>SSH 원격 서버</b>의 개발 서버를 한 창에서 모니터링하고 안전하게 제어합니다.
@@ -199,5 +197,3 @@ swift run Porter --screenshot docs     # README 스크린샷 재생성 (데모 �
 ## 라이선스
 
 [MIT](../LICENSE)
-
-Porter는 [Goodtail](https://github.com/Goodtail)의 첫 공개 오픈소스 프로젝트입니다.
