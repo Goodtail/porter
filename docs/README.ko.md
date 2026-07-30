@@ -4,6 +4,8 @@
 
 <h1 align="center">Porter</h1>
 
+<p align="center"><b>Goodtail Open Source · 00</b></p>
+
 <p align="center">
   개발자를 위한 macOS 네이티브 프로세스·포트 매니저 —<br>
   로컬 Mac과 <b>SSH 원격 서버</b>의 개발 서버를 한 창에서 모니터링하고 안전하게 제어합니다.
@@ -11,6 +13,12 @@
 
 <p align="center">
   <a href="../README.md">English</a> · <b>한국어</b> · <a href="README.ja.md">日本語</a>
+</p>
+
+<p align="center">
+  <a href="https://goodtail.app/s/porter">제품 소개</a> ·
+  <a href="https://github.com/Goodtail/porter/releases/latest">다운로드</a> ·
+  <a href="https://github.com/Goodtail/porter/issues">이슈</a>
 </p>
 
 <p align="center">
@@ -103,8 +111,8 @@ curl -fsSL https://raw.githubusercontent.com/Goodtail/porter/main/Scripts/instal
 ### 직접 다운로드
 
 **[Releases](https://github.com/Goodtail/porter/releases/latest)**에서 DMG를 받아
-Porter를 Applications에 끌어다 놓으세요. 실행 시 릴리스 피드를 확인해(Sparkle)
-새 버전이 나오면 클릭 한 번으로 업데이트됩니다.
+Porter를 Applications에 끌어다 놓으세요. Sparkle 연동은 구현되어 있으며,
+서명·공증 릴리스가 준비되면 업데이트 피드를 활성화할 예정입니다.
 
 > 1.0 이전 빌드는 아직 공증 전이라 첫 실행 시 macOS 경고가 뜹니다. 설치
 > 스크립트는 격리 플래그를 자동으로 해제하며, Homebrew는 `--no-quarantine`
@@ -177,15 +185,19 @@ swift test                             # 파서·인증 단위 테스트
 swift run Porter --screenshot docs     # README 스크린샷 재생성 (데모 데이터)
 ```
 
-기여 환영합니다 — 이슈나 PR을 열어주세요.
+현재 앱은 한국어·영어·일본어를 지원합니다. 재현 방법을 포함한 이슈와 범위가
+명확한 PR을 환영합니다.
 
 ## 로드맵
 
-- v0.2 — 메뉴바 모드, 프로세스 그룹 재기동, 로그 스트리밍, 다국어 지원
-- v0.3 — tmux 세션 뷰, Docker 컨테이너 인식, 공증(notarized) 릴리스
+- 서명·공증 릴리스와 실제 Sparkle 업데이트 피드 운영
+- tmux 세션 및 Docker 컨테이너 인식
+- 접근성과 다국어 품질 보완
 
 전체 제품 스펙은 [PRD.md](../PRD.md) 참고.
 
 ## 라이선스
 
 [MIT](../LICENSE)
+
+Porter는 [Goodtail](https://github.com/Goodtail)의 첫 공개 오픈소스 프로젝트입니다.

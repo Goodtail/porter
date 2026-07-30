@@ -4,6 +4,8 @@
 
 <h1 align="center">Porter</h1>
 
+<p align="center"><b>Goodtail Open Source · 00</b></p>
+
 <p align="center">
   A native macOS process &amp; port manager for developers —<br>
   monitor and safely control dev servers on your Mac <b>and over SSH</b>, in one window.
@@ -11,6 +13,12 @@
 
 <p align="center">
   <b>English</b> · <a href="docs/README.ko.md">한국어</a> · <a href="docs/README.ja.md">日本語</a>
+</p>
+
+<p align="center">
+  <a href="https://goodtail.app/s/porter">Product page</a> ·
+  <a href="https://github.com/Goodtail/porter/releases/latest">Download</a> ·
+  <a href="https://github.com/Goodtail/porter/issues">Issues</a>
 </p>
 
 <p align="center">
@@ -107,8 +115,8 @@ curl -fsSL https://raw.githubusercontent.com/Goodtail/porter/main/Scripts/instal
 ### Manual download
 
 Grab the DMG from **[Releases](https://github.com/Goodtail/porter/releases/latest)**
-and drag Porter into Applications. Porter checks the release feed on launch
-(Sparkle) and offers one-click updates.
+and drag Porter into Applications. Sparkle support is built in; the signed update
+feed will be enabled with a future notarized release.
 
 > Pre-1.0 builds are not notarized yet, so macOS warns on first launch. The
 > install script clears the quarantine flag for you; with Homebrew add
@@ -183,16 +191,19 @@ swift test          # parser & auth unit tests
 swift run Porter --screenshot docs   # regenerate README screenshots (demo data)
 ```
 
-The UI is currently Korean-first; localization (starting with English) is on the
-roadmap below. Contributions welcome — open an issue or PR.
+The app currently ships in English, Korean, and Japanese. Contributions are
+welcome — open an issue with a reproducible case or send a focused pull request.
 
 ## Roadmap
 
-- v0.2 — menu-bar mode, process-group restart, live log streaming, localization
-- v0.3 — tmux session view, Docker container awareness, notarized releases
+- Signed and notarized releases with an active Sparkle update feed
+- tmux session visibility and Docker container awareness
+- Accessibility and localization polish
 
 See [PRD.md](PRD.md) (Korean) for the full product spec.
 
 ## License
 
 [MIT](LICENSE)
+
+Porter is the first public open-source project from [Goodtail](https://github.com/Goodtail).
